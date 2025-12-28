@@ -101,7 +101,7 @@ export const authService = {
   verifyOtp: async (
     data: VerifyOtpRequest,
     req: Request
-  ): Promise<{ account: Account; tokens: Tokens; requiresOnboarding: boolean }> => {
+  ): Promise<{ account: Account; tokens: Tokens; requiresOnboarding: boolean; defaultProfileId?: string }> => {
     const { phone, otp } = data;
     const { ip, userAgent } = getClientInfo(req);
 
@@ -181,11 +181,13 @@ export const authService = {
 
     let accountId: string;
     let requiresOnboarding = false;
+    let defaultProfileId: string | null = null;
 
     if (!account) {
       // Create new account
       accountId = uuidv4();
       const now = new Date();
+      const defaultProfileIdNew = uuidv4();
 
       await transaction(async (client) => {
         // Create account with phone only
@@ -206,9 +208,11 @@ export const authService = {
         await client.query(
           `INSERT INTO profiles (id, account_id, name, is_default, created_at)
            VALUES ($1, $2, $3, $4, $5)`,
-          [uuidv4(), accountId, 'General', true, now]
+          [defaultProfileIdNew, accountId, 'General', true, now]
         );
       });
+
+      defaultProfileId = defaultProfileIdNew;
 
       account = {
         id: accountId,
@@ -225,6 +229,13 @@ export const authService = {
       accountId = account.id;
       // Check if onboarding is required
       requiresOnboarding = !account.full_name || !account.date_of_birth || !account.blood_group;
+      
+      // Get default profile ID for existing accounts
+      const defaultProfile = await queryOne<{ id: string }>(
+        `SELECT id FROM profiles WHERE account_id = $1 AND is_default = TRUE LIMIT 1`,
+        [accountId]
+      );
+      defaultProfileId = defaultProfile?.id || null;
     }
 
     // Create auth session with refresh token
@@ -260,6 +271,7 @@ export const authService = {
       },
       tokens,
       requiresOnboarding,
+      defaultProfileId: defaultProfileId || undefined,
     };
   },
 

@@ -23,6 +23,13 @@ export interface VerifyOtpRequest {
   otp: string;
 }
 
+export interface VerifyOtpResponse {
+  account: Account;
+  tokens: Tokens;
+  requiresOnboarding: boolean;
+  defaultProfileId?: string;
+}
+
 export interface RefreshTokenRequest {
   refreshToken: string;
 }

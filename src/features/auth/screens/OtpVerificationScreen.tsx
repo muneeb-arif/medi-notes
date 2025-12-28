@@ -2,6 +2,7 @@ import { PrimaryButton } from '@components/PrimaryButton';
 import { Screen } from '@components/Screen';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useActiveProfileStore } from '@store/activeProfile.store';
 import { useSessionStore } from '@store/session.store';
 import { spacing, typography } from '@theme';
 import React, { useState } from 'react';
@@ -36,6 +37,7 @@ export const OtpVerificationScreen: React.FC = () => {
   const route = useRoute();
   const { phone } = (route.params || {}) as RouteParams;
   const { setTokens, setAccount } = useSessionStore();
+  const { setActiveProfileId } = useActiveProfileStore();
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
 
@@ -62,6 +64,11 @@ export const OtpVerificationScreen: React.FC = () => {
       const response = await authApi.verifyOtp({ phone, otp: data.otp });
       await setTokens(response.tokens);
       setAccount(response.account);
+      
+      // Auto-select default profile if provided
+      if (response.defaultProfileId) {
+        await setActiveProfileId(response.defaultProfileId);
+      }
       
       // Navigation will be handled automatically by RootNavigator
       // based on requiresOnboarding flag in the account state
@@ -261,7 +268,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     fontSize: 24,
     backgroundColor: '#FFFFFF',
-    height: 50,
+    height: 60,
     color: '#000000',
     textAlign: 'center',
     letterSpacing: 8,
