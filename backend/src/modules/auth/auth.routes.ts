@@ -6,9 +6,9 @@ const router = Router();
 
 /**
  * @swagger
- * /auth/register:
+ * /auth/request-otp:
  *   post:
- *     summary: Register a new account
+ *     summary: Request OTP for phone authentication
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -17,46 +17,32 @@ const router = Router();
  *           schema:
  *             type: object
  *             required:
- *               - email
- *               - password
- *               - name
+ *               - phone
  *             properties:
- *               email:
+ *               phone:
  *                 type: string
- *                 format: email
- *                 example: user@example.com
- *               password:
- *                 type: string
- *                 minLength: 6
- *                 example: StrongP@ssw0rd
- *               name:
- *                 type: string
- *                 minLength: 2
- *                 example: Primary User
+ *                 example: "+1234567890"
  *     responses:
- *       201:
- *         description: Account created successfully
+ *       200:
+ *         description: OTP sent successfully
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 account:
- *                   $ref: '#/components/schemas/Account'
- *                 tokens:
- *                   $ref: '#/components/schemas/Tokens'
+ *                 message:
+ *                   type: string
+ *                   example: "OTP sent successfully"
  *       400:
  *         $ref: '#/components/responses/Error'
- *       409:
- *         $ref: '#/components/responses/Error'
  */
-router.post('/register', authController.register);
+router.post('/request-otp', authController.requestOtp);
 
 /**
  * @swagger
- * /auth/login:
+ * /auth/verify-otp:
  *   post:
- *     summary: Login with email and password
+ *     summary: Verify OTP and authenticate
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -65,19 +51,18 @@ router.post('/register', authController.register);
  *           schema:
  *             type: object
  *             required:
- *               - email
- *               - password
+ *               - phone
+ *               - otp
  *             properties:
- *               email:
+ *               phone:
  *                 type: string
- *                 format: email
- *                 example: user@example.com
- *               password:
+ *                 example: "+1234567890"
+ *               otp:
  *                 type: string
- *                 example: StrongP@ssw0rd
+ *                 example: "12345"
  *     responses:
  *       200:
- *         description: Login successful
+ *         description: Authentication successful
  *         content:
  *           application/json:
  *             schema:
@@ -87,10 +72,12 @@ router.post('/register', authController.register);
  *                   $ref: '#/components/schemas/Account'
  *                 tokens:
  *                   $ref: '#/components/schemas/Tokens'
- *       401:
+ *                 requiresOnboarding:
+ *                   type: boolean
+ *       400:
  *         $ref: '#/components/responses/Error'
  */
-router.post('/login', authController.login);
+router.post('/verify-otp', authController.verifyOtp);
 
 /**
  * @swagger
