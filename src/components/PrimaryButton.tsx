@@ -1,6 +1,6 @@
+import { colors, radius, spacing, typography } from '@theme';
 import React from 'react';
-import { TouchableOpacity, Text, ActivityIndicator, StyleSheet, ViewStyle } from 'react-native';
-import { spacing, radius, typography, colors } from '@theme';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
 
 interface PrimaryButtonProps {
   label: string;
@@ -40,6 +40,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
+    minWidth: 120,
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -47,6 +48,7 @@ const styles = StyleSheet.create({
   buttonText: {
     ...typography.bodyBold,
     color: '#FFFFFF',
+    textAlign: 'center',
   },
 });
 

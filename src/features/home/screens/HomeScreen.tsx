@@ -1,21 +1,20 @@
-import { useNavigation } from '@react-navigation/native';
-import { useActiveProfileStore } from '@store/activeProfile.store';
-import React, { useMemo } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Screen } from '@components/Screen';
 import { AppHeader } from '@components/AppHeader';
-import { SectionCard } from '@components/SectionCard';
-import { ListRow } from '@components/ListRow';
 import { EmptyState } from '@components/EmptyState';
-import { PrimaryButton } from '@components/PrimaryButton';
-import { spacing, typography } from '@theme';
+import { ListRow } from '@components/ListRow';
+import { Screen } from '@components/Screen';
+import { SectionCard } from '@components/SectionCard';
 import { useMedicationsList } from '@features/medications/hooks/useMedicationsList';
+import type { Medication } from '@features/medications/types';
 import { useProfileDetail } from '@features/profiles/hooks/useProfileDetail';
 import { useReportsList } from '@features/reports/hooks/useReportsList';
-import { useVitalsList } from '@features/vitals/hooks/useVitalsList';
-import type { Medication } from '@features/medications/types';
 import type { Report } from '@features/reports/types';
+import { useVitalsList } from '@features/vitals/hooks/useVitalsList';
 import type { VitalEntry } from '@features/vitals/types';
+import { useNavigation } from '@react-navigation/native';
+import { useActiveProfileStore } from '@store/activeProfile.store';
+import { spacing, typography } from '@theme';
+import React, { useMemo } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const calculateAge = (dateOfBirth: string): number => {
   const birthDate = new Date(dateOfBirth);
@@ -191,12 +190,18 @@ export const HomeScreen: React.FC = () => {
               key={report.id}
               title={report.title}
               subtitle={`${report.type} • ${new Date(report.reportDate).toLocaleDateString()}`}
-              onPress={() =>
-                navigation.navigate('ReportViewer' as never, {
-                  profileId: activeProfileId,
-                  reportId: report.id,
-                } as never)
-              }
+              onPress={() => {
+                const parent = navigation.getParent();
+                if (parent) {
+                  (parent as any).navigate('Reports', {
+                    screen: 'ReportViewer',
+                    params: {
+                      profileId: activeProfileId,
+                      reportId: report.id,
+                    },
+                  });
+                }
+              }}
               showDivider={index < recentReports.length - 1}
             />
           ))
@@ -317,6 +322,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...typography.h2,
     fontSize: 18,
+    flexShrink: 1,
+    flex: 1,
+    marginRight: spacing.md,
   },
   viewAllText: {
     ...typography.body,

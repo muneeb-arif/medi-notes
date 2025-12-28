@@ -1,6 +1,6 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { spacing, typography } from '@theme';
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface AppHeaderProps {
   title: string;
@@ -36,10 +36,13 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.h2,
+    flex: 1,
+    flexShrink: 1,
   },
   rightAction: {
     ...typography.bodyBold,
     color: '#007AFF',
+    marginLeft: spacing.md,
   },
 });
 

@@ -1,14 +1,14 @@
+import { useNavigation, useRoute } from '@react-navigation/native';
 import React from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Switch,
   ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
 import { useProfileDetail } from '../hooks/useProfileDetail';
 import { useUpdateProfileSettings } from '../hooks/useUpdateProfileSettings';
 
@@ -59,36 +59,52 @@ export const ProfileDetailScreen: React.FC = () => {
         <Text style={styles.sectionTitle}>Personal Information</Text>
         <View style={styles.row}>
           <Text style={styles.label}>Name:</Text>
-          <Text style={styles.value}>{profile.fullName}</Text>
+          <View style={styles.valueContainer}>
+            <Text style={styles.value} numberOfLines={2} ellipsizeMode="tail">
+              {profile.fullName}
+            </Text>
+          </View>
         </View>
         <View style={styles.row}>
           <Text style={styles.label}>Date of Birth:</Text>
-          <Text style={styles.value}>{profile.dateOfBirth}</Text>
+          <View style={styles.valueContainer}>
+            <Text style={styles.value}>{profile.dateOfBirth}</Text>
+          </View>
         </View>
         <View style={styles.row}>
           <Text style={styles.label}>Gender:</Text>
-          <Text style={styles.value}>{profile.gender}</Text>
+          <View style={styles.valueContainer}>
+            <Text style={styles.value}>{profile.gender}</Text>
+          </View>
         </View>
         <View style={styles.row}>
           <Text style={styles.label}>Relation:</Text>
-          <Text style={styles.value}>{profile.relationToAccount}</Text>
+          <View style={styles.valueContainer}>
+            <Text style={styles.value}>{profile.relationToAccount}</Text>
+          </View>
         </View>
         {profile.bloodType && (
           <View style={styles.row}>
             <Text style={styles.label}>Blood Type:</Text>
-            <Text style={styles.value}>{profile.bloodType}</Text>
+            <View style={styles.valueContainer}>
+              <Text style={styles.value}>{profile.bloodType}</Text>
+            </View>
           </View>
         )}
         {profile.heightCm && (
           <View style={styles.row}>
             <Text style={styles.label}>Height:</Text>
-            <Text style={styles.value}>{profile.heightCm} cm</Text>
+            <View style={styles.valueContainer}>
+              <Text style={styles.value}>{profile.heightCm} cm</Text>
+            </View>
           </View>
         )}
         {profile.weightKg && (
           <View style={styles.row}>
             <Text style={styles.label}>Weight:</Text>
-            <Text style={styles.value}>{profile.weightKg} kg</Text>
+            <View style={styles.valueContainer}>
+              <Text style={styles.value}>{profile.weightKg} kg</Text>
+            </View>
           </View>
         )}
       </View>
@@ -136,12 +152,12 @@ export const ProfileDetailScreen: React.FC = () => {
 
       <TouchableOpacity
         style={styles.editButton}
-        onPress={() =>
-          navigation.navigate('ProfileEditor' as never, {
+        onPress={() => {
+          (navigation as any).navigate('ProfileEditor', {
             mode: 'edit',
             profileId: profile.id,
-          } as never)
-        }
+          });
+        }}
       >
         <Text style={styles.editButtonText}>Edit Profile</Text>
       </TouchableOpacity>
@@ -170,6 +186,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
@@ -177,10 +194,20 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     color: '#666',
+    flexShrink: 0,
+    marginRight: 16,
+  },
+  valueContainer: {
+    flex: 1,
+    flexShrink: 1,
+    alignItems: 'flex-end',
   },
   value: {
     fontSize: 14,
     fontWeight: '500',
+    textAlign: 'right',
+    flexShrink: 1,
+    flex: 1,
   },
   contactCard: {
     backgroundColor: '#f5f5f5',
