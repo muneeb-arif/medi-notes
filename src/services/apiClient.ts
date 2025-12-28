@@ -1,7 +1,7 @@
 import { useSessionStore } from '@store/session.store';
 import Constants from 'expo-constants';
 
-const baseURL = Constants.expoConfig?.extra?.apiBaseURL || process.env.EXPO_PUBLIC_API_BASE_URL || '';
+const baseURL =  process.env.EXPO_PUBLIC_API_BASE_URL || Constants.expoConfig?.extra?.apiBaseURL || '';
 
 interface RequestConfig extends RequestInit {
   headers?: HeadersInit;

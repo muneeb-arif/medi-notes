@@ -7,6 +7,7 @@ import {
   logoutSchema,
   refreshTokenSchema,
   requestOtpSchema,
+  updateAccountSchema,
   verifyOtpSchema,
 } from './auth.schemas';
 import { authService } from './auth.service';
@@ -30,7 +31,13 @@ export const authController = {
       if (error instanceof HttpError) {
         return sendError(res, error.code, error.message, error.statusCode, requestId);
       }
-      sendError(res, 'OTP_REQUEST_FAILED', 'Failed to request OTP', 500, requestId);
+      // Log the actual error for debugging (no PHI)
+      console.error('[OTP Request Error]', {
+        message: error?.message,
+        code: error?.code,
+        requestId,
+      });
+      sendError(res, 'OTP_REQUEST_FAILED', error?.message || 'Failed to request OTP', 500, requestId);
     }
   },
 
@@ -95,6 +102,25 @@ export const authController = {
         return sendError(res, error.code, error.message, error.statusCode, requestId);
       }
       sendError(res, 'FETCH_FAILED', 'Failed to fetch account', 500, requestId);
+    }
+  },
+
+  updateMe: async (req: AuthRequest, res: Response) => {
+    const requestId = (req as any).requestId;
+    try {
+      const accountId = req.accountId;
+      if (!accountId) {
+        return sendError(res, 'UNAUTHORIZED', 'Not authenticated', 401, requestId);
+      }
+
+      const data = validateRequest(updateAccountSchema, req.body);
+      const account = await authService.updateAccount(accountId, data);
+      sendSuccess(res, account);
+    } catch (error: any) {
+      if (error instanceof HttpError) {
+        return sendError(res, error.code, error.message, error.statusCode, requestId);
+      }
+      sendError(res, 'UPDATE_FAILED', 'Failed to update account', 500, requestId);
     }
   },
 };

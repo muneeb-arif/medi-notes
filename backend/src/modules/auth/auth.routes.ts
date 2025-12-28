@@ -156,4 +156,44 @@ router.post('/logout', authController.logout);
  */
 router.get('/account/me', authMiddleware, authController.getMe);
 
+/**
+ * @swagger
+ * /auth/account/me:
+ *   put:
+ *     summary: Update current authenticated account
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - fullName
+ *               - dateOfBirth
+ *               - bloodGroup
+ *             properties:
+ *               fullName:
+ *                 type: string
+ *               dateOfBirth:
+ *                 type: string
+ *                 format: date
+ *               bloodGroup:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Account updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Account'
+ *       400:
+ *         $ref: '#/components/responses/Error'
+ *       401:
+ *         $ref: '#/components/responses/Error'
+ */
+router.put('/account/me', authMiddleware, authController.updateMe);
+
 export default router;

@@ -1,7 +1,7 @@
 import { PrimaryButton } from '@components/PrimaryButton';
 import { Screen } from '@components/Screen';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSessionStore } from '@store/session.store';
 import { spacing, typography } from '@theme';
 import React, { useState } from 'react';
@@ -21,46 +21,83 @@ import {
 import { z } from 'zod';
 import { authApi } from '../api/auth.api';
 
-const registerSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  name: z.string().min(2, 'Name must be at least 2 characters'),
+const otpSchema = z.object({
+  otp: z.string().length(5, 'OTP must be exactly 5 digits').regex(/^\d+$/, 'OTP must contain only digits'),
 });
 
-type RegisterFormData = z.infer<typeof registerSchema>;
+type OtpFormData = z.infer<typeof otpSchema>;
 
-export const RegisterScreen: React.FC = () => {
+interface RouteParams {
+  phone: string;
+}
+
+export const OtpVerificationScreen: React.FC = () => {
   const navigation = useNavigation();
+  const route = useRoute();
+  const { phone } = (route.params || {}) as RouteParams;
   const { setTokens, setAccount } = useSessionStore();
   const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
   const {
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm<RegisterFormData>({
-    resolver: zodResolver(registerSchema),
+  } = useForm<OtpFormData>({
+    resolver: zodResolver(otpSchema),
     defaultValues: {
-      email: 'user@example.com',
-      password: 'StrongP@ssw0rd',
-      name: 'John Doe',
+      otp: '',
     },
   });
 
-  const onSubmit = async (data: RegisterFormData) => {
+  const onSubmit = async (data: OtpFormData) => {
+    if (!phone) {
+      Alert.alert('Error', 'Phone number is missing. Please start over.');
+      navigation.goBack();
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const response = await authApi.register(data);
+      const response = await authApi.verifyOtp({ phone, otp: data.otp });
       await setTokens(response.tokens);
       setAccount(response.account);
+      
+      // Navigation will be handled automatically by RootNavigator
+      // based on requiresOnboarding flag in the account state
     } catch (error) {
       const apiError = error as { message?: string; code?: string };
-      Alert.alert(
-        'Registration Failed',
-        apiError.message || 'Unable to create account. Please try again.'
-      );
+      let errorMessage = 'Invalid OTP. Please try again.';
+
+      if (apiError.code === 'OTP_EXPIRED') {
+        errorMessage = 'OTP has expired. Please request a new one.';
+      } else if (apiError.code === 'OTP_MAX_ATTEMPTS') {
+        errorMessage = 'Maximum attempts exceeded. Please request a new OTP.';
+      } else if (apiError.message) {
+        errorMessage = apiError.message;
+      }
+
+      Alert.alert('Verification Failed', errorMessage);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (!phone) return;
+
+    setIsResending(true);
+    try {
+      await authApi.requestOtp({ phone });
+      Alert.alert('Success', 'A new OTP has been sent to your phone.');
+    } catch (error) {
+      const apiError = error as { message?: string };
+      Alert.alert(
+        'Resend Failed',
+        apiError.message || 'Unable to resend OTP. Please try again.'
+      );
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -74,95 +111,56 @@ export const RegisterScreen: React.FC = () => {
         >
           <ScrollView
             contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
-            {/* Branding */}
             <View style={styles.brandingContainer}>
               <Image
                 source={require('../../../../assets/images/logo.png')}
                 style={styles.logo}
                 resizeMode="contain"
               />
-              <Text style={styles.brandSubtitle}>Your health records, organized</Text>
+              <Text style={styles.brandTitle}>My Medi Logs</Text>
             </View>
 
-            {/* Form Card */}
             <View style={styles.formCard}>
-              <Text style={styles.cardTitle}>Create Account</Text>
+              <Text style={styles.cardTitle}>Enter Verification Code</Text>
+              <Text style={styles.cardSubtitle}>
+                We&apos;ve sent a 5-digit code to {phone ? phone.replace(/(.{2})(.{3})(.{4})/, '$1***$3') : 'your phone'}
+              </Text>
 
               <View style={styles.field}>
-                <Text style={styles.label}>Full Name</Text>
+                <Text style={styles.label}>Verification Code</Text>
                 <Controller
                   control={control}
-                  name="name"
+                  name="otp"
                   render={({ field: { onChange, onBlur, value } }) => (
                     <>
                       <TextInput
-                        style={[styles.input, errors.name && styles.inputError]}
-                        placeholder="John Doe"
+                        style={[styles.input, errors.otp && styles.inputError]}
+                        placeholder="12345"
                         value={value}
-                        onChangeText={onChange}
+                        onChangeText={(text) => {
+                          // Only allow digits and limit to 5
+                          const digitsOnly = text.replace(/[^0-9]/g, '').slice(0, 5);
+                          onChange(digitsOnly);
+                        }}
                         onBlur={onBlur}
-                        autoCapitalize="words"
-                        placeholderTextColor="#8E8E93"
-                      />
-                      {errors.name && <Text style={styles.errorText}>{errors.name.message}</Text>}
-                    </>
-                  )}
-                />
-              </View>
-
-              <View style={styles.field}>
-                <Text style={styles.label}>Email</Text>
-                <Controller
-                  control={control}
-                  name="email"
-                  render={({ field: { onChange, onBlur, value } }) => (
-                    <>
-                      <TextInput
-                        style={[styles.input, errors.email && styles.inputError]}
-                        placeholder="user@example.com"
-                        value={value}
-                        onChangeText={onChange}
-                        onBlur={onBlur}
-                        keyboardType="email-address"
+                        keyboardType="number-pad"
                         autoCapitalize="none"
-                        autoComplete="email"
+                        maxLength={5}
                         placeholderTextColor="#8E8E93"
                       />
-                      {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
-                    </>
-                  )}
-                />
-              </View>
-
-              <View style={styles.field}>
-                <Text style={styles.label}>Password</Text>
-                <Controller
-                  control={control}
-                  name="password"
-                  render={({ field: { onChange, onBlur, value } }) => (
-                    <>
-                      <TextInput
-                        style={[styles.input, errors.password && styles.inputError]}
-                        placeholder="Enter password"
-                        value={value}
-                        onChangeText={onChange}
-                        onBlur={onBlur}
-                        secureTextEntry
-                        autoCapitalize="none"
-                        autoComplete="password"
-                        placeholderTextColor="#8E8E93"
-                      />
-                      {errors.password && <Text style={styles.errorText}>{errors.password.message}</Text>}
-                      <Text style={styles.helperText}>Minimum 6 characters</Text>
+                      {errors.otp && (
+                        <Text style={styles.errorText}>{errors.otp.message}</Text>
+                      )}
+                      <Text style={styles.helperText}>Enter the 5-digit code</Text>
                     </>
                   )}
                 />
               </View>
 
               <PrimaryButton
-                label={isLoading ? 'Registering...' : 'Register.'}
+                label={isLoading ? 'Verifying...' : 'Verify OTP'}
                 onPress={handleSubmit(onSubmit)}
                 loading={isLoading}
                 disabled={isLoading}
@@ -170,10 +168,13 @@ export const RegisterScreen: React.FC = () => {
               />
 
               <TouchableOpacity
-                style={styles.linkButton}
-                onPress={() => navigation.goBack()}
+                style={styles.resendButton}
+                onPress={handleResendOtp}
+                disabled={isResending}
               >
-                <Text style={styles.linkText}>Already have an account? Login</Text>
+                <Text style={styles.resendText}>
+                  {isResending ? 'Sending...' : "Didn't receive code? Resend"}
+                </Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -221,12 +222,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 2,
     marginTop: spacing.md,
-    marginBottom: spacing.xs,
-  },
-  brandSubtitle: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    opacity: 0.9,
   },
   formCard: {
     backgroundColor: '#FFFFFF',
@@ -241,8 +236,14 @@ const styles = StyleSheet.create({
   cardTitle: {
     ...typography.h2,
     fontSize: 22,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xs,
     textAlign: 'center',
+  },
+  cardSubtitle: {
+    ...typography.caption,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+    color: '#8E8E93',
   },
   field: {
     marginBottom: spacing.md,
@@ -258,10 +259,13 @@ const styles = StyleSheet.create({
     borderColor: '#E5E5EA',
     borderRadius: 8,
     padding: spacing.md,
-    fontSize: 16,
+    fontSize: 24,
     backgroundColor: '#FFFFFF',
-    height: 48,
+    height: 50,
     color: '#000000',
+    textAlign: 'center',
+    letterSpacing: 8,
+    fontWeight: '600',
   },
   inputError: {
     borderColor: '#FF3B30',
@@ -278,18 +282,19 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: spacing.md,
+    width: '100%',
   },
-  linkButton: {
+  resendButton: {
     marginTop: spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacing.sm,
-    width: '100%',
   },
-  linkText: {
+  resendText: {
     ...typography.body,
     color: '#007AFF',
     fontSize: 15,
     textAlign: 'center',
   },
 });
+

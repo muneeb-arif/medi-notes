@@ -16,6 +16,10 @@ const OTP_EXPIRY_MINUTES = 5;
 const OTP_MAX_ATTEMPTS = 5;
 
 const generateOTP = (): string => {
+  // Use test OTP in development mode
+  if (config.appEnv === 'dev') {
+    return config.testOtp;
+  }
   return Math.floor(10000 + Math.random() * 90000).toString();
 };
 
@@ -84,8 +88,12 @@ export const authService = {
     );
 
     // In production, send OTP via SMS service here
-    // For now, we'll log it (but NEVER in production with real PHI)
-    console.log(`[DEV ONLY] OTP for ${phone}: ${otp}`);
+    if (config.appEnv === 'dev') {
+      console.log(`[DEV MODE] Using test OTP: ${otp}`);
+    } else {
+      // For now, we'll log it (but NEVER in production with real PHI)
+      console.log(`[DEV ONLY] OTP for ${phone}: ${otp}`);
+    }
 
     return { message: 'OTP sent successfully' };
   },
@@ -396,5 +404,24 @@ export const authService = {
       createdAt: account.created_at.toISOString(),
       requiresOnboarding,
     };
+  },
+
+  updateAccount: async (
+    accountId: string,
+    data: { fullName: string; dateOfBirth: string; bloodGroup: string }
+  ): Promise<Account> => {
+    await query(
+      `UPDATE accounts
+       SET full_name = $1, date_of_birth = $2, blood_group = $3, updated_at = NOW()
+       WHERE id = $4`,
+      [data.fullName, data.dateOfBirth, data.bloodGroup, accountId]
+    );
+
+    const account = await authService.getAccountById(accountId);
+    if (!account) {
+      throw new HttpError(404, 'ACCOUNT_NOT_FOUND', 'Account not found');
+    }
+
+    return account;
   },
 };

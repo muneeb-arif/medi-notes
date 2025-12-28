@@ -1,0 +1,303 @@
+import { PrimaryButton } from '@components/PrimaryButton';
+import { Screen } from '@components/Screen';
+import { SectionCard } from '@components/SectionCard';
+import { zodResolver } from '@hookform/resolvers/zod';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Picker } from '@react-native-picker/picker';
+import { useSessionStore } from '@store/session.store';
+import { spacing, typography } from '@theme';
+import React, { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import {
+  Alert,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { z } from 'zod';
+import { authApi } from '../api/auth.api';
+
+const accountInfoSchema = z.object({
+  fullName: z.string().min(2, 'Name must be at least 2 characters'),
+  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
+  bloodGroup: z.string().min(1, 'Blood group is required'),
+});
+
+type AccountInfoFormData = z.infer<typeof accountInfoSchema>;
+
+const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+const formatDate = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const parseDate = (dateString: string): Date => {
+  if (!dateString) return new Date();
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+export const AccountInfoScreen: React.FC = () => {
+  const { account, setAccount } = useSessionStore();
+  const [isLoading, setIsLoading] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+    watch,
+  } = useForm<AccountInfoFormData>({
+    resolver: zodResolver(accountInfoSchema),
+    defaultValues: {
+      fullName: account?.fullName || '',
+      dateOfBirth: account?.dateOfBirth || '',
+      bloodGroup: account?.bloodGroup || '',
+    },
+  });
+
+  const dateOfBirthValue = watch('dateOfBirth');
+  const selectedDate = dateOfBirthValue ? parseDate(dateOfBirthValue) : new Date(2000, 0, 1);
+
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+      if (event.type === 'set' && selectedDate) {
+        setValue('dateOfBirth', formatDate(selectedDate), { shouldValidate: true });
+      }
+    } else {
+      if (selectedDate) {
+        setValue('dateOfBirth', formatDate(selectedDate), { shouldValidate: true });
+      }
+    }
+  };
+
+  const onSubmit = async (data: AccountInfoFormData) => {
+    setIsLoading(true);
+    try {
+      const updatedAccount = await authApi.updateAccount({
+        fullName: data.fullName,
+        dateOfBirth: data.dateOfBirth,
+        bloodGroup: data.bloodGroup,
+      });
+      setAccount(updatedAccount);
+      // Navigation will be handled by RootNavigator based on onboarding status
+      // RootNavigator will automatically navigate to App when requiresOnboarding becomes false
+    } catch (error) {
+      const apiError = error as { message?: string; code?: string };
+      Alert.alert(
+        'Update Failed',
+        apiError.message || 'Unable to update account information. Please try again.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Screen scrollable>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Complete Your Profile</Text>
+          <Text style={styles.subtitle}>
+            Please provide the following information to continue
+          </Text>
+        </View>
+
+        <SectionCard style={styles.card}>
+          <View style={styles.field}>
+            <Text style={styles.label}>Full Name *</Text>
+            <Controller
+              control={control}
+              name="fullName"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <>
+                  <TextInput
+                    style={[styles.input, errors.fullName && styles.inputError]}
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                    placeholder="Enter your full name"
+                    placeholderTextColor="#8E8E93"
+                  />
+                  {errors.fullName && (
+                    <Text style={styles.errorText}>{errors.fullName.message}</Text>
+                  )}
+                </>
+              )}
+            />
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>Date of Birth *</Text>
+            <Controller
+              control={control}
+              name="dateOfBirth"
+              render={({ field: { value } }) => (
+                <>
+                  <TouchableOpacity
+                    style={[styles.input, styles.dateInput, errors.dateOfBirth && styles.inputError]}
+                    onPress={() => setShowDatePicker(true)}
+                  >
+                    <Text style={[styles.dateText, !value && styles.placeholderText]}>
+                      {value || 'Select date of birth'}
+                    </Text>
+                  </TouchableOpacity>
+                  {showDatePicker && (
+                    <DateTimePicker
+                      value={selectedDate}
+                      mode="date"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={onDateChange}
+                      maximumDate={new Date()}
+                      minimumDate={new Date(1900, 0, 1)}
+                    />
+                  )}
+                  {Platform.OS === 'ios' && showDatePicker && (
+                    <TouchableOpacity
+                      style={styles.datePickerButton}
+                      onPress={() => setShowDatePicker(false)}
+                    >
+                      <Text style={styles.datePickerButtonText}>Done</Text>
+                    </TouchableOpacity>
+                  )}
+                  {errors.dateOfBirth && (
+                    <Text style={styles.errorText}>{errors.dateOfBirth.message}</Text>
+                  )}
+                </>
+              )}
+            />
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>Blood Group *</Text>
+            <Controller
+              control={control}
+              name="bloodGroup"
+              render={({ field: { onChange, value } }) => (
+                <>
+                  <View style={[styles.pickerContainer, errors.bloodGroup && styles.inputError]}>
+                    <Picker
+                      selectedValue={value}
+                      onValueChange={(itemValue) => {
+                        onChange(itemValue);
+                      }}
+                      style={styles.picker}
+                    >
+                      <Picker.Item label="Select blood group" value="" />
+                      {BLOOD_GROUPS.map((group) => (
+                        <Picker.Item key={group} label={group} value={group} />
+                      ))}
+                    </Picker>
+                  </View>
+                  {errors.bloodGroup && (
+                    <Text style={styles.errorText}>{errors.bloodGroup.message}</Text>
+                  )}
+                </>
+              )}
+            />
+          </View>
+
+          <PrimaryButton
+            label={isLoading ? 'Saving...' : 'Continue'}
+            onPress={handleSubmit(onSubmit)}
+            loading={isLoading}
+            disabled={isLoading}
+            style={styles.button}
+          />
+        </SectionCard>
+      </View>
+    </Screen>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  title: {
+    ...typography.h1,
+    marginBottom: spacing.xs,
+  },
+  subtitle: {
+    ...typography.caption,
+    color: '#8E8E93',
+  },
+  card: {
+    margin: spacing.md,
+  },
+  field: {
+    marginBottom: spacing.md,
+  },
+  label: {
+    ...typography.bodyBold,
+    fontSize: 14,
+    color: '#666666',
+    marginBottom: spacing.xs,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    borderRadius: 8,
+    padding: spacing.md,
+    fontSize: 16,
+    backgroundColor: '#FFFFFF',
+    height: 50,
+    color: '#000000',
+  },
+  dateInput: {
+    justifyContent: 'center',
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#000000',
+  },
+  placeholderText: {
+    color: '#8E8E93',
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  picker: {
+    height: 55,
+  },
+  inputError: {
+    borderColor: '#FF3B30',
+  },
+  errorText: {
+    ...typography.caption,
+    color: '#FF3B30',
+    marginTop: spacing.xs,
+  },
+  button: {
+    marginTop: spacing.lg,
+    width: '100%',
+  },
+  datePickerButton: {
+    marginTop: spacing.sm,
+    padding: spacing.md,
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  datePickerButtonText: {
+    ...typography.bodyBold,
+    color: '#FFFFFF',
+  },
+});

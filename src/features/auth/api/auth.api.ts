@@ -1,22 +1,22 @@
 import { apiClient } from '@services/apiClient';
 import type {
   Account,
-  LoginRequest,
-  LoginResponse,
   LogoutRequest,
   RefreshTokenRequest,
   RefreshTokenResponse,
-  RegisterRequest,
-  RegisterResponse,
+  RequestOtpRequest,
+  RequestOtpResponse,
+  VerifyOtpRequest,
+  VerifyOtpResponse,
 } from '../types';
 
 export const authApi = {
-  register: async (data: RegisterRequest): Promise<RegisterResponse> => {
-    return apiClient.post<RegisterResponse>('/auth/register', data);
+  requestOtp: async (data: RequestOtpRequest): Promise<RequestOtpResponse> => {
+    return apiClient.post<RequestOtpResponse>('/auth/request-otp', data);
   },
 
-  login: async (data: LoginRequest): Promise<LoginResponse> => {
-    return apiClient.post<LoginResponse>('/auth/login', data);
+  verifyOtp: async (data: VerifyOtpRequest): Promise<VerifyOtpResponse> => {
+    return apiClient.post<VerifyOtpResponse>('/auth/verify-otp', data);
   },
 
   refreshToken: async (data: RefreshTokenRequest): Promise<RefreshTokenResponse> => {
@@ -28,7 +28,14 @@ export const authApi = {
   },
 
   getCurrentAccount: async (): Promise<Account> => {
-    return apiClient.get<Account>('/account/me');
+    return apiClient.get<Account>('/auth/account/me');
+  },
+
+  updateAccount: async (data: {
+    fullName: string;
+    dateOfBirth: string;
+    bloodGroup: string;
+  }): Promise<Account> => {
+    return apiClient.put<Account>('/auth/account/me', data);
   },
 };
-

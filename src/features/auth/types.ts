@@ -1,12 +1,20 @@
-export interface RegisterRequest {
-  email: string;
-  password: string;
-  name: string;
+export interface RequestOtpRequest {
+  phone: string;
 }
 
-export interface LoginRequest {
-  email: string;
-  password: string;
+export interface RequestOtpResponse {
+  message: string;
+}
+
+export interface VerifyOtpRequest {
+  phone: string;
+  otp: string;
+}
+
+export interface VerifyOtpResponse {
+  account: Account;
+  tokens: Tokens;
+  requiresOnboarding: boolean;
 }
 
 export interface RefreshTokenRequest {
@@ -19,19 +27,13 @@ export interface LogoutRequest {
 
 export interface Account {
   id: string;
-  email: string;
-  name: string;
-  settings?: {
-    language?: string;
-    timezone?: string;
-    notificationPreferences?: {
-      appointments?: boolean;
-      medications?: boolean;
-      reports?: boolean;
-      security?: boolean;
-    };
-  };
+  phone: string;
+  fullName: string | null;
+  dateOfBirth: string | null;
+  bloodGroup: string | null;
+  email: string | null;
   createdAt: string;
+  requiresOnboarding: boolean;
 }
 
 export interface Tokens {
@@ -39,18 +41,7 @@ export interface Tokens {
   refreshToken: string;
 }
 
-export interface RegisterResponse {
-  account: Account;
-  tokens: Tokens;
-}
-
-export interface LoginResponse {
-  account: Account;
-  tokens: Tokens;
-}
-
 export interface RefreshTokenResponse {
   accessToken: string;
   refreshToken: string;
 }
-

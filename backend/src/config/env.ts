@@ -5,5 +5,7 @@ export const config = {
   jwtRefreshExpiry: '7d',
   apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:3000',
   databaseUrl: process.env.DATABASE_URL || 'postgresql://localhost:5432/medinotes',
+  appEnv: process.env.APP_ENV || 'production',
+  testOtp: process.env.TEST_OTP || '00000',
 };
 
