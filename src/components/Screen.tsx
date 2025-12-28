@@ -39,7 +39,7 @@ export const Screen: React.FC<ScreenProps> = ({
 
   const containerStyle = {
     paddingTop: insets.top,
-    paddingBottom: insets.bottom + tabBarHeight,
+    paddingBottom: insets.bottom + tabBarHeight - 100,
     paddingLeft: insets.left,
     paddingRight: insets.right,
   };
@@ -80,7 +80,8 @@ const styles = StyleSheet.create({
   content: {
     // Removed flexGrow: 1 to allow content to scroll properly when it exceeds viewport height
     // Added paddingBottom to ensure last element (e.g., Create button) is accessible
-    paddingBottom: 20,
+    // Increased padding to account for keyboard and ensure button is always reachable
+    paddingBottom: 100,
   },
 });
 

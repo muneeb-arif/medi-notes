@@ -1,27 +1,24 @@
+import { PrimaryButton } from '@components/PrimaryButton';
+import { Screen } from '@components/Screen';
+import { SectionCard } from '@components/SectionCard';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { spacing, typography } from '@theme';
 import React from 'react';
+import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
+  View,
 } from 'react-native';
-import { useForm, Controller, useFieldArray } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import { Screen } from '@components/Screen';
-import { SectionCard } from '@components/SectionCard';
-import { PrimaryButton } from '@components/PrimaryButton';
-import { ListRow } from '@components/ListRow';
-import { spacing, typography } from '@theme';
 import { useCreateProfile } from '../hooks/useCreateProfile';
-import { useUpdateProfile } from '../hooks/useUpdateProfile';
 import { useProfileDetail } from '../hooks/useProfileDetail';
+import { useUpdateProfile } from '../hooks/useUpdateProfile';
 
 const emergencyContactSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -135,11 +132,7 @@ export const ProfileEditorScreen: React.FC = () => {
 
   return (
     <Screen scrollable padding="none">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        <View style={styles.content}>
+      <View style={styles.content}>
           {/* Personal Information */}
           <SectionCard style={styles.section}>
             <Text style={styles.sectionTitle}>Personal Information</Text>
@@ -374,18 +367,14 @@ export const ProfileEditorScreen: React.FC = () => {
             style={styles.saveButton}
           />
         </View>
-      </KeyboardAvoidingView>
     </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  keyboardView: {
-    flex: 1,
-  },
   content: {
     padding: spacing.md,
-    paddingBottom: 120,
+    paddingBottom: 120, // Extra padding to ensure Create button is accessible
   },
   centerContainer: {
     flex: 1,
