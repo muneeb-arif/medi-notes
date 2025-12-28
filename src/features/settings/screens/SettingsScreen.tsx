@@ -41,11 +41,16 @@ export const SettingsScreen: React.FC = () => {
               await clearSession();
               setIsLoggingOut(false);
               // Navigation will be handled by RootNavigator when accessToken becomes null
+              // This will automatically redirect to PhoneInputScreen via AuthNavigator
             }
           },
         },
       ]
     );
+  };
+
+  const handleUpdateAccountInfo = () => {
+    navigation.navigate('AccountInfo' as never);
   };
 
   return (
@@ -63,10 +68,23 @@ export const SettingsScreen: React.FC = () => {
             <Text style={styles.errorText}>Failed to load account information</Text>
           </View>
         ) : account ? (
-          <View style={styles.accountCard}>
-            <Text style={styles.accountName}>{account.name}</Text>
-            <Text style={styles.accountEmail}>{account.email}</Text>
-          </View>
+          <>
+            <View style={styles.accountCard}>
+              {account.fullName && (
+                <Text style={styles.accountName}>{account.fullName}</Text>
+              )}
+              <Text style={[styles.accountPhone, !account.email && styles.accountPhoneLast]}>
+                {account.phone}
+              </Text>
+              {account.email && (
+                <Text style={styles.accountEmail}>{account.email}</Text>
+              )}
+            </View>
+            <TouchableOpacity style={styles.settingRow} onPress={handleUpdateAccountInfo}>
+              <Text style={styles.settingLabel}>Update Account Info</Text>
+              <Text style={styles.settingValue}>›</Text>
+            </TouchableOpacity>
+          </>
         ) : null}
       </View>
 
@@ -167,12 +185,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 8,
+    marginBottom: 8,
   },
   accountName: {
     fontSize: 18,
     fontWeight: '600',
     color: '#000000',
     marginBottom: 4,
+  },
+  accountPhone: {
+    fontSize: 16,
+    color: '#000000',
+    marginBottom: 4,
+  },
+  accountPhoneLast: {
+    marginBottom: 0,
   },
   accountEmail: {
     fontSize: 14,

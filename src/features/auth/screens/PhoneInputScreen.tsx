@@ -23,7 +23,7 @@ const phoneSchema = z.object({
   phone: z
     .string()
     .min(1, 'Phone number is required')
-    .regex(/^\+?[1-9]\d{1,14}$/, 'Invalid phone number format'),
+    .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid phone number'),
 });
 
 type PhoneFormData = z.infer<typeof phoneSchema>;
@@ -53,16 +53,16 @@ export const PhoneInputScreen: React.FC = () => {
       let errorMessage = 'Unable to send OTP. Please try again.';
       
       if (apiError.code === 'NETWORK_ERROR') {
-        errorMessage = 'Network error. Please check your connection and ensure the backend server is running.';
+        errorMessage = 'Unable to connect. Please check your internet connection and try again.';
       } else if (apiError.message) {
         errorMessage = apiError.message;
       } else if (apiError.status === 500) {
-        errorMessage = 'Server error. Please try again later.';
+        errorMessage = 'Something went wrong. Please try again in a moment.';
       } else if (apiError.status === 404) {
-        errorMessage = 'API endpoint not found. Please check the server configuration.';
+        errorMessage = 'Unable to send code. Please try again.';
       }
       
-      Alert.alert('OTP Request Failed', errorMessage);
+      Alert.alert('Unable to Send Code', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -126,7 +126,7 @@ export const PhoneInputScreen: React.FC = () => {
               </View>
 
               <PrimaryButton
-                label={isLoading ? 'Sending...' : 'Send OTP'}
+                label={isLoading ? 'Sending...' : 'Continue with phone'}
                 onPress={handleSubmit(onSubmit)}
                 loading={isLoading}
                 disabled={isLoading}

@@ -4,6 +4,7 @@ import { SectionCard } from '@components/SectionCard';
 import { zodResolver } from '@hookform/resolvers/zod';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
+import { useNavigation } from '@react-navigation/native';
 import { useSessionStore } from '@store/session.store';
 import { spacing, typography } from '@theme';
 import React, { useEffect, useState } from 'react';
@@ -21,22 +22,27 @@ import { z } from 'zod';
 import { authApi } from '../api/auth.api';
 
 const accountInfoSchema = z.object({
-  fullName: z.string().min(2, 'Name must be at least 2 characters'),
+  fullName: z.string().min(2, 'Please enter your full name'),
+  bloodGroup: z.string().min(1, 'Please select your blood group'),
   dateOfBirth: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
-    .refine(
-      (date) => {
-        const parsedDate = new Date(date);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        return parsedDate < today;
-      },
-      { message: 'Date of birth must be in the past' }
-    ),
-  bloodGroup: z.string().min(1, 'Blood group is required'),
+    .union([
+      z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, 'Please enter a valid date')
+        .refine(
+          (date) => {
+            const parsedDate = new Date(date);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            return parsedDate < today;
+          },
+          { message: 'Date of birth must be in the past' }
+        ),
+      z.literal(''),
+    ])
+    .optional(),
   gender: z.enum(['male', 'female', 'other']).optional(),
-  email: z.string().email('Invalid email format').optional().or(z.literal('')),
+  email: z.string().email('Please enter a valid email address').optional().or(z.literal('')),
   recoveryPhone: z.string().optional().or(z.literal('')),
 });
 
@@ -64,6 +70,7 @@ const parseDate = (dateString: string): Date => {
 };
 
 export const AccountInfoScreen: React.FC = () => {
+  const navigation = useNavigation();
   const { account, setAccount } = useSessionStore();
   const [isLoading, setIsLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -100,6 +107,8 @@ export const AccountInfoScreen: React.FC = () => {
       setShowDatePicker(false);
       if (event.type === 'set' && selectedDate) {
         setValue('dateOfBirth', formatDate(selectedDate), { shouldValidate: true });
+      } else if (event.type === 'dismissed') {
+        // User dismissed the picker, keep current value
       }
     } else {
       if (selectedDate) {
@@ -113,20 +122,25 @@ export const AccountInfoScreen: React.FC = () => {
     try {
       const updatedAccount = await authApi.updateAccount({
         fullName: data.fullName,
-        dateOfBirth: data.dateOfBirth,
         bloodGroup: data.bloodGroup,
+        dateOfBirth: data.dateOfBirth || null,
         gender: data.gender || null,
         email: data.email || null,
         recoveryPhone: data.recoveryPhone || null,
       });
       setAccount(updatedAccount);
-      // Navigation will be handled automatically by RootNavigator
+      
+      // If accessed from Settings (not onboarding), navigate back
+      // Otherwise, navigation will be handled automatically by RootNavigator
       // when requiresOnboarding becomes false after account update
+      if (!updatedAccount.requiresOnboarding && navigation.canGoBack()) {
+        navigation.goBack();
+      }
     } catch (error) {
       const apiError = error as { message?: string; code?: string };
       Alert.alert(
-        'Update Failed',
-        apiError.message || 'Unable to update account information. Please try again.'
+        'Unable to Save',
+        apiError.message || 'Unable to save your information. Please check your connection and try again.'
       );
     } finally {
       setIsLoading(false);
@@ -169,52 +183,6 @@ export const AccountInfoScreen: React.FC = () => {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Date of Birth *</Text>
-            <Controller
-              control={control}
-              name="dateOfBirth"
-              render={({ field: { value } }) => (
-                <>
-                  <TouchableOpacity
-                    style={[
-                      styles.input,
-                      styles.dateInput,
-                      errors.dateOfBirth && styles.inputError,
-                    ]}
-                    onPress={() => !isLoading && setShowDatePicker(true)}
-                    disabled={isLoading}
-                  >
-                    <Text style={[styles.dateText, !value && styles.placeholderText]}>
-                      {value || 'Select date of birth'}
-                    </Text>
-                  </TouchableOpacity>
-                  {showDatePicker && (
-                    <DateTimePicker
-                      value={selectedDate}
-                      mode="date"
-                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                      onChange={onDateChange}
-                      maximumDate={new Date()}
-                      minimumDate={new Date(1900, 0, 1)}
-                    />
-                  )}
-                  {Platform.OS === 'ios' && showDatePicker && (
-                    <TouchableOpacity
-                      style={styles.datePickerButton}
-                      onPress={() => setShowDatePicker(false)}
-                    >
-                      <Text style={styles.datePickerButtonText}>Done</Text>
-                    </TouchableOpacity>
-                  )}
-                  {errors.dateOfBirth && (
-                    <Text style={styles.errorText}>{errors.dateOfBirth.message}</Text>
-                  )}
-                </>
-              )}
-            />
-          </View>
-
-          <View style={styles.field}>
             <Text style={styles.label}>Blood Group *</Text>
             <Controller
               control={control}
@@ -238,6 +206,52 @@ export const AccountInfoScreen: React.FC = () => {
                   </View>
                   {errors.bloodGroup && (
                     <Text style={styles.errorText}>{errors.bloodGroup.message}</Text>
+                  )}
+                </>
+              )}
+            />
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>Date of Birth</Text>
+            <Controller
+              control={control}
+              name="dateOfBirth"
+              render={({ field: { value } }) => (
+                <>
+                  <TouchableOpacity
+                    style={[
+                      styles.input,
+                      styles.dateInput,
+                      errors.dateOfBirth && styles.inputError,
+                    ]}
+                    onPress={() => !isLoading && setShowDatePicker(true)}
+                    disabled={isLoading}
+                  >
+                    <Text style={[styles.dateText, !value && styles.placeholderText]}>
+                      {value || 'Select date of birth (optional)'}
+                    </Text>
+                  </TouchableOpacity>
+                  {showDatePicker && (
+                    <DateTimePicker
+                      value={selectedDate}
+                      mode="date"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={onDateChange}
+                      maximumDate={new Date()}
+                      minimumDate={new Date(1900, 0, 1)}
+                    />
+                  )}
+                  {Platform.OS === 'ios' && showDatePicker && (
+                    <TouchableOpacity
+                      style={styles.datePickerButton}
+                      onPress={() => setShowDatePicker(false)}
+                    >
+                      <Text style={styles.datePickerButtonText}>Done</Text>
+                    </TouchableOpacity>
+                  )}
+                  {errors.dateOfBirth && (
+                    <Text style={styles.errorText}>{errors.dateOfBirth.message}</Text>
                   )}
                 </>
               )}

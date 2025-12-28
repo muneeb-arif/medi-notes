@@ -231,8 +231,8 @@ export const authService = {
       requiresOnboarding = true;
     } else {
       accountId = account.id;
-      // Check if onboarding is required
-      requiresOnboarding = !account.full_name || !account.date_of_birth || !account.blood_group;
+      // Check if onboarding is required (only full_name and blood_group are required)
+      requiresOnboarding = !account.full_name || !account.blood_group;
       
       // Get default profile ID for existing accounts
       const defaultProfile = await queryOne<{ id: string }>(
@@ -412,7 +412,8 @@ export const authService = {
       return null;
     }
 
-    const requiresOnboarding = !account.full_name || !account.date_of_birth || !account.blood_group;
+    // Check if onboarding is required (only full_name and blood_group are required)
+    const requiresOnboarding = !account.full_name || !account.blood_group;
 
     return {
       id: account.id,
@@ -432,17 +433,23 @@ export const authService = {
     accountId: string,
     data: {
       fullName: string;
-      dateOfBirth: string;
       bloodGroup: string;
+      dateOfBirth?: string | null;
       gender?: 'male' | 'female' | 'other' | null;
       email?: string | null;
       recoveryPhone?: string | null;
     }
   ): Promise<Account> => {
     // Build dynamic UPDATE query based on provided fields
-    const updates: string[] = ['full_name = $1', 'date_of_birth = $2', 'blood_group = $3', 'updated_at = NOW()'];
-    const values: any[] = [data.fullName, data.dateOfBirth, data.bloodGroup];
-    let paramIndex = 4;
+    const updates: string[] = ['full_name = $1', 'blood_group = $2', 'updated_at = NOW()'];
+    const values: any[] = [data.fullName, data.bloodGroup];
+    let paramIndex = 3;
+
+    if (data.dateOfBirth !== undefined) {
+      updates.push(`date_of_birth = $${paramIndex}`);
+      values.push(data.dateOfBirth || null);
+      paramIndex++;
+    }
 
     if (data.gender !== undefined) {
       updates.push(`gender = $${paramIndex}`);

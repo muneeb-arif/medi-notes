@@ -33,8 +33,8 @@ export const authApi = {
 
   updateAccount: async (data: {
     fullName: string;
-    dateOfBirth: string;
     bloodGroup: string;
+    dateOfBirth?: string | null;
     gender?: 'male' | 'female' | 'other' | null;
     email?: string | null;
     recoveryPhone?: string | null;

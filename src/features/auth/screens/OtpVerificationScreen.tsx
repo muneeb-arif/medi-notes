@@ -23,7 +23,7 @@ import { z } from 'zod';
 import { authApi } from '../api/auth.api';
 
 const otpSchema = z.object({
-  otp: z.string().length(5, 'OTP must be exactly 5 digits').regex(/^\d+$/, 'OTP must contain only digits'),
+  otp: z.string().length(5, 'Please enter all 5 digits').regex(/^\d+$/, 'Code must contain only numbers'),
 });
 
 type OtpFormData = z.infer<typeof otpSchema>;
@@ -54,7 +54,7 @@ export const OtpVerificationScreen: React.FC = () => {
 
   const onSubmit = async (data: OtpFormData) => {
     if (!phone) {
-      Alert.alert('Error', 'Phone number is missing. Please start over.');
+      Alert.alert('Missing Information', 'Phone number is missing. Please start over.');
       navigation.goBack();
       return;
     }
@@ -74,12 +74,14 @@ export const OtpVerificationScreen: React.FC = () => {
       // based on requiresOnboarding flag in the account state
     } catch (error) {
       const apiError = error as { message?: string; code?: string };
-      let errorMessage = 'Invalid OTP. Please try again.';
+      let errorMessage = 'The code you entered is incorrect. Please try again.';
 
-      if (apiError.code === 'OTP_EXPIRED') {
-        errorMessage = 'OTP has expired. Please request a new one.';
-      } else if (apiError.code === 'OTP_MAX_ATTEMPTS') {
-        errorMessage = 'Maximum attempts exceeded. Please request a new OTP.';
+      if (apiError.code === 'expired_otp' || apiError.code === 'OTP_EXPIRED') {
+        errorMessage = 'This code has expired. Please request a new one.';
+      } else if (apiError.code === 'too_many_attempts' || apiError.code === 'OTP_MAX_ATTEMPTS') {
+        errorMessage = 'Too many attempts. Please request a new code.';
+      } else if (apiError.code === 'invalid_otp' || apiError.code === 'INVALID_OTP') {
+        errorMessage = 'The code you entered is incorrect. Please try again.';
       } else if (apiError.message) {
         errorMessage = apiError.message;
       }
@@ -100,8 +102,8 @@ export const OtpVerificationScreen: React.FC = () => {
     } catch (error) {
       const apiError = error as { message?: string };
       Alert.alert(
-        'Resend Failed',
-        apiError.message || 'Unable to resend OTP. Please try again.'
+        'Unable to Resend',
+        apiError.message || 'Unable to send a new code. Please try again.'
       );
     } finally {
       setIsResending(false);
@@ -132,7 +134,7 @@ export const OtpVerificationScreen: React.FC = () => {
             <View style={styles.formCard}>
               <Text style={styles.cardTitle}>Enter Verification Code</Text>
               <Text style={styles.cardSubtitle}>
-                We&apos;ve sent a 5-digit code to {phone ? phone.replace(/(.{2})(.{3})(.{4})/, '$1***$3') : 'your phone'}
+                Enter the 5-digit code sent to your phone
               </Text>
 
               <View style={styles.field}>
@@ -160,7 +162,7 @@ export const OtpVerificationScreen: React.FC = () => {
                       {errors.otp && (
                         <Text style={styles.errorText}>{errors.otp.message}</Text>
                       )}
-                      <Text style={styles.helperText}>Enter the 5-digit code</Text>
+                      <Text style={styles.helperText}>Enter the 5-digit code sent to your phone</Text>
                     </>
                   )}
                 />
