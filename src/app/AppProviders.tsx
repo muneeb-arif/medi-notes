@@ -1,8 +1,9 @@
 import { authApi } from '@features/auth/api/auth.api';
-import { useSessionStore } from '@store/session.store';
 import { useActiveProfileStore } from '@store/activeProfile.store';
+import { useSessionStore } from '@store/session.store';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React, { useEffect, useState } from 'react';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -70,9 +71,25 @@ export const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
     return null;
   }
 
+  // SafeAreaProvider automatically detects safe areas from the device
+  // You can optionally provide initialMetrics to override or set minimum insets:
+  //
+  // Example: Set minimum top inset (e.g., for custom status bar handling)
+  const customMetrics = {
+    insets: {
+      top: 44,      // Set minimum top spacing (e.g., iOS status bar height)
+      bottom: 34,   // Set minimum bottom spacing (e.g., home indicator area)
+      left: initialWindowMetrics?.insets?.left || 0,   // Keep auto-detected
+      right: initialWindowMetrics?.insets?.right || 0, // Keep auto-detected
+    },
+    frame: initialWindowMetrics?.frame || { x: 0, y: 0, width: 0, height: 0 },
+  };
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>{children}</ThemeProvider>
-    </QueryClientProvider>
+    <SafeAreaProvider initialMetrics={customMetrics}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>{children}</ThemeProvider>
+      </QueryClientProvider>
+    </SafeAreaProvider>
   );
 };
