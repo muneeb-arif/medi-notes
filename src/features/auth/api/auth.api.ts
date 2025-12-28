@@ -35,6 +35,9 @@ export const authApi = {
     fullName: string;
     dateOfBirth: string;
     bloodGroup: string;
+    gender?: 'male' | 'female' | 'other' | null;
+    email?: string | null;
+    recoveryPhone?: string | null;
   }): Promise<Account> => {
     return apiClient.put<Account>('/auth/account/me', data);
   },

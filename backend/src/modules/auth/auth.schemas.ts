@@ -29,5 +29,16 @@ export const updateAccountSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
   dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
   bloodGroup: z.string().min(1, 'Blood group is required'),
+  gender: z.enum(['male', 'female', 'other']).optional().nullable(),
+  email: z
+    .union([z.string().email('Invalid email format'), z.literal('')])
+    .optional()
+    .nullable()
+    .transform((val) => (val === '' ? null : val)),
+  recoveryPhone: z
+    .union([z.string(), z.literal('')])
+    .optional()
+    .nullable()
+    .transform((val) => (val === '' ? null : val)),
 });
 

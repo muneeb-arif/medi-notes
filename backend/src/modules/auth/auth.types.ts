@@ -4,7 +4,9 @@ export interface Account {
   fullName: string | null;
   dateOfBirth: string | null;
   bloodGroup: string | null;
+  gender: 'male' | 'female' | 'other' | null;
   email: string | null;
+  recoveryPhone: string | null;
   createdAt: string;
   requiresOnboarding: boolean;
 }

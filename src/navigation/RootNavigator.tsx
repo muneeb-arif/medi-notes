@@ -28,7 +28,14 @@ export const RootNavigator: React.FC = () => {
         {!isAuthenticated ? (
           <Stack.Screen name="Auth" component={AuthNavigator} />
         ) : requiresOnboarding ? (
-          <Stack.Screen name="AccountInfo" component={AccountInfoScreen} />
+          <Stack.Screen
+            name="AccountInfo"
+            component={AccountInfoScreen}
+            options={{
+              gestureEnabled: false,
+              headerBackVisible: false,
+            }}
+          />
         ) : (
           <Stack.Screen name="App" component={AppNavigator} />
         )}

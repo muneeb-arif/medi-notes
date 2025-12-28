@@ -6,7 +6,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { useSessionStore } from '@store/session.store';
 import { spacing, typography } from '@theme';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   Alert,
@@ -22,13 +22,33 @@ import { authApi } from '../api/auth.api';
 
 const accountInfoSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
-  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
+  dateOfBirth: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
+    .refine(
+      (date) => {
+        const parsedDate = new Date(date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return parsedDate < today;
+      },
+      { message: 'Date of birth must be in the past' }
+    ),
   bloodGroup: z.string().min(1, 'Blood group is required'),
+  gender: z.enum(['male', 'female', 'other']).optional(),
+  email: z.string().email('Invalid email format').optional().or(z.literal('')),
+  recoveryPhone: z.string().optional().or(z.literal('')),
 });
 
 type AccountInfoFormData = z.infer<typeof accountInfoSchema>;
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+const GENDERS = [
+  { label: 'Select gender', value: '' },
+  { label: 'Male', value: 'male' },
+  { label: 'Female', value: 'female' },
+  { label: 'Other', value: 'other' },
+];
 
 const formatDate = (date: Date): string => {
   const year = date.getFullYear();
@@ -38,7 +58,7 @@ const formatDate = (date: Date): string => {
 };
 
 const parseDate = (dateString: string): Date => {
-  if (!dateString) return new Date();
+  if (!dateString) return new Date(2000, 0, 1);
   const [year, month, day] = dateString.split('-').map(Number);
   return new Date(year, month - 1, day);
 };
@@ -60,8 +80,17 @@ export const AccountInfoScreen: React.FC = () => {
       fullName: account?.fullName || '',
       dateOfBirth: account?.dateOfBirth || '',
       bloodGroup: account?.bloodGroup || '',
+      gender: account?.gender || undefined,
+      email: account?.email || '',
+      recoveryPhone: account?.recoveryPhone || '',
     },
   });
+
+  // Disable back button - this screen is mandatory
+  useEffect(() => {
+    // Navigation options are handled by RootNavigator
+    // The screen is already non-skippable because RootNavigator only shows it when requiresOnboarding is true
+  }, []);
 
   const dateOfBirthValue = watch('dateOfBirth');
   const selectedDate = dateOfBirthValue ? parseDate(dateOfBirthValue) : new Date(2000, 0, 1);
@@ -86,10 +115,13 @@ export const AccountInfoScreen: React.FC = () => {
         fullName: data.fullName,
         dateOfBirth: data.dateOfBirth,
         bloodGroup: data.bloodGroup,
+        gender: data.gender || null,
+        email: data.email || null,
+        recoveryPhone: data.recoveryPhone || null,
       });
       setAccount(updatedAccount);
-      // Navigation will be handled by RootNavigator based on onboarding status
-      // RootNavigator will automatically navigate to App when requiresOnboarding becomes false
+      // Navigation will be handled automatically by RootNavigator
+      // when requiresOnboarding becomes false after account update
     } catch (error) {
       const apiError = error as { message?: string; code?: string };
       Alert.alert(
@@ -126,6 +158,7 @@ export const AccountInfoScreen: React.FC = () => {
                     onBlur={onBlur}
                     placeholder="Enter your full name"
                     placeholderTextColor="#8E8E93"
+                    editable={!isLoading}
                   />
                   {errors.fullName && (
                     <Text style={styles.errorText}>{errors.fullName.message}</Text>
@@ -143,8 +176,13 @@ export const AccountInfoScreen: React.FC = () => {
               render={({ field: { value } }) => (
                 <>
                   <TouchableOpacity
-                    style={[styles.input, styles.dateInput, errors.dateOfBirth && styles.inputError]}
-                    onPress={() => setShowDatePicker(true)}
+                    style={[
+                      styles.input,
+                      styles.dateInput,
+                      errors.dateOfBirth && styles.inputError,
+                    ]}
+                    onPress={() => !isLoading && setShowDatePicker(true)}
+                    disabled={isLoading}
                   >
                     <Text style={[styles.dateText, !value && styles.placeholderText]}>
                       {value || 'Select date of birth'}
@@ -190,6 +228,7 @@ export const AccountInfoScreen: React.FC = () => {
                         onChange(itemValue);
                       }}
                       style={styles.picker}
+                      enabled={!isLoading}
                     >
                       <Picker.Item label="Select blood group" value="" />
                       {BLOOD_GROUPS.map((group) => (
@@ -199,6 +238,83 @@ export const AccountInfoScreen: React.FC = () => {
                   </View>
                   {errors.bloodGroup && (
                     <Text style={styles.errorText}>{errors.bloodGroup.message}</Text>
+                  )}
+                </>
+              )}
+            />
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>Gender</Text>
+            <Controller
+              control={control}
+              name="gender"
+              render={({ field: { onChange, value } }) => (
+                <>
+                  <View style={styles.pickerContainer}>
+                    <Picker
+                      selectedValue={value || ''}
+                      onValueChange={(itemValue) => {
+                        onChange(itemValue || undefined);
+                      }}
+                      style={styles.picker}
+                      enabled={!isLoading}
+                    >
+                      {GENDERS.map((gender) => (
+                        <Picker.Item key={gender.value} label={gender.label} value={gender.value} />
+                      ))}
+                    </Picker>
+                  </View>
+                </>
+              )}
+            />
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>Email</Text>
+            <Controller
+              control={control}
+              name="email"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <>
+                  <TextInput
+                    style={[styles.input, errors.email && styles.inputError]}
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                    placeholder="Enter your email (optional)"
+                    placeholderTextColor="#8E8E93"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    editable={!isLoading}
+                  />
+                  {errors.email && (
+                    <Text style={styles.errorText}>{errors.email.message}</Text>
+                  )}
+                </>
+              )}
+            />
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>Recovery Phone</Text>
+            <Controller
+              control={control}
+              name="recoveryPhone"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <>
+                  <TextInput
+                    style={[styles.input, errors.recoveryPhone && styles.inputError]}
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                    placeholder="Enter recovery phone (optional)"
+                    placeholderTextColor="#8E8E93"
+                    keyboardType="phone-pad"
+                    editable={!isLoading}
+                  />
+                  {errors.recoveryPhone && (
+                    <Text style={styles.errorText}>{errors.recoveryPhone.message}</Text>
                   )}
                 </>
               )}

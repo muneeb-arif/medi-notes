@@ -170,10 +170,12 @@ export const authService = {
       full_name: string | null;
       date_of_birth: string | null;
       blood_group: string | null;
+      gender: 'male' | 'female' | 'other' | null;
       email: string | null;
+      recovery_phone: string | null;
       created_at: Date;
     }>(
-      `SELECT id, phone, full_name, date_of_birth, blood_group, email, created_at
+      `SELECT id, phone, full_name, date_of_birth, blood_group, gender, email, recovery_phone, created_at
        FROM accounts
        WHERE phone = $1`,
       [phone]
@@ -220,7 +222,9 @@ export const authService = {
         full_name: null,
         date_of_birth: null,
         blood_group: null,
+        gender: null,
         email: null,
+        recovery_phone: null,
         created_at: now,
       };
 
@@ -265,7 +269,9 @@ export const authService = {
         fullName: account.full_name,
         dateOfBirth: account.date_of_birth,
         bloodGroup: account.blood_group,
+        gender: account.gender,
         email: account.email,
+        recoveryPhone: account.recovery_phone,
         createdAt: account.created_at.toISOString(),
         requiresOnboarding,
       },
@@ -391,10 +397,12 @@ export const authService = {
       full_name: string | null;
       date_of_birth: string | null;
       blood_group: string | null;
+      gender: 'male' | 'female' | 'other' | null;
       email: string | null;
+      recovery_phone: string | null;
       created_at: Date;
     }>(
-      `SELECT id, phone, full_name, date_of_birth, blood_group, email, created_at
+      `SELECT id, phone, full_name, date_of_birth, blood_group, gender, email, recovery_phone, created_at
        FROM accounts
        WHERE id = $1`,
       [accountId]
@@ -412,7 +420,9 @@ export const authService = {
       fullName: account.full_name,
       dateOfBirth: account.date_of_birth,
       bloodGroup: account.blood_group,
+      gender: account.gender,
       email: account.email,
+      recoveryPhone: account.recovery_phone,
       createdAt: account.created_at.toISOString(),
       requiresOnboarding,
     };
@@ -420,13 +430,45 @@ export const authService = {
 
   updateAccount: async (
     accountId: string,
-    data: { fullName: string; dateOfBirth: string; bloodGroup: string }
+    data: {
+      fullName: string;
+      dateOfBirth: string;
+      bloodGroup: string;
+      gender?: 'male' | 'female' | 'other' | null;
+      email?: string | null;
+      recoveryPhone?: string | null;
+    }
   ): Promise<Account> => {
+    // Build dynamic UPDATE query based on provided fields
+    const updates: string[] = ['full_name = $1', 'date_of_birth = $2', 'blood_group = $3', 'updated_at = NOW()'];
+    const values: any[] = [data.fullName, data.dateOfBirth, data.bloodGroup];
+    let paramIndex = 4;
+
+    if (data.gender !== undefined) {
+      updates.push(`gender = $${paramIndex}`);
+      values.push(data.gender || null);
+      paramIndex++;
+    }
+
+    if (data.email !== undefined) {
+      updates.push(`email = $${paramIndex}`);
+      values.push(data.email || null);
+      paramIndex++;
+    }
+
+    if (data.recoveryPhone !== undefined) {
+      updates.push(`recovery_phone = $${paramIndex}`);
+      values.push(data.recoveryPhone || null);
+      paramIndex++;
+    }
+
+    values.push(accountId);
+
     await query(
       `UPDATE accounts
-       SET full_name = $1, date_of_birth = $2, blood_group = $3, updated_at = NOW()
-       WHERE id = $4`,
-      [data.fullName, data.dateOfBirth, data.bloodGroup, accountId]
+       SET ${updates.join(', ')}
+       WHERE id = $${paramIndex}`,
+      values
     );
 
     const account = await authService.getAccountById(accountId);
