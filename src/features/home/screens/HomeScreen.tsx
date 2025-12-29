@@ -84,7 +84,7 @@ export const HomeScreen: React.FC = () => {
   if (!activeProfileId) {
     return (
       <Screen>
-        <AppHeader title="Home" />
+        <AppHeader title="Welcome to Medi Notes" />
         <EmptyState
           title="No active profile selected"
           description="Select or create a profile to view your health dashboard"
@@ -98,7 +98,7 @@ export const HomeScreen: React.FC = () => {
   if (isLoading) {
     return (
       <Screen>
-        <AppHeader title="Home" />
+        <AppHeader title="Welcome to Medi Notes" />
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" />
         </View>
@@ -108,7 +108,7 @@ export const HomeScreen: React.FC = () => {
 
   return (
     <Screen scrollable>
-      <AppHeader title="Home" />
+      <AppHeader title="Welcome to Medi Notes" />
       
       {/* Active Profile Card */}
       {profile ? (
@@ -139,6 +139,7 @@ export const HomeScreen: React.FC = () => {
             title="No profile selected"
             description="Create or select a profile to get started"
             actionLabel="Go to Profiles"
+            buttonStyle={styles.emptyStateButton}
             onAction={() => navigation.navigate('Profiles' as never)}
           />
         </SectionCard>
@@ -338,5 +339,8 @@ const styles = StyleSheet.create({
   medicationCount: {
     ...typography.caption,
     marginBottom: spacing.sm,
+  },
+  emptyStateButton: {
+    width: '100%',
   },
 });

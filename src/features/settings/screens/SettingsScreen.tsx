@@ -1,5 +1,5 @@
-import { useNavigation } from '@react-navigation/native';
 import { authApi } from '@features/auth/api/auth.api';
+import { useNavigation } from '@react-navigation/native';
 import { useSessionStore } from '@store/session.store';
 import Constants from 'expo-constants';
 import React, { useState } from 'react';
@@ -235,5 +235,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+    width: "100%",
+    textAlign: "center"
   },
 });
