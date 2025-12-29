@@ -37,7 +37,7 @@ export const OtpVerificationScreen: React.FC = () => {
   const route = useRoute();
   const { phone } = (route.params || {}) as RouteParams;
   const { setTokens, setAccount } = useSessionStore();
-  const { setActiveProfileId } = useActiveProfileStore();
+  const { ensureDefaultProfile } = useActiveProfileStore();
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
 
@@ -48,7 +48,7 @@ export const OtpVerificationScreen: React.FC = () => {
   } = useForm<OtpFormData>({
     resolver: zodResolver(otpSchema),
     defaultValues: {
-      otp: '',
+      otp: '00000',
     },
   });
 
@@ -65,10 +65,8 @@ export const OtpVerificationScreen: React.FC = () => {
       await setTokens(response.tokens);
       setAccount(response.account);
       
-      // Auto-select default profile if provided
-      if (response.defaultProfileId) {
-        await setActiveProfileId(response.defaultProfileId);
-      }
+      // Ensure default profile is selected after login
+      await ensureDefaultProfile();
       
       // Navigation will be handled automatically by RootNavigator
       // based on requiresOnboarding flag in the account state
@@ -231,6 +229,8 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 2,
     marginTop: spacing.md,
+    width: '100%',
+    textAlign: "center"
   },
   formCard: {
     backgroundColor: '#FFFFFF',

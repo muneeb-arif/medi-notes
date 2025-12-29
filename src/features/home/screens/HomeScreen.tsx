@@ -1,6 +1,7 @@
 import { AppHeader } from '@components/AppHeader';
 import { EmptyState } from '@components/EmptyState';
 import { ListRow } from '@components/ListRow';
+import { ProfileSwitchSheet } from '@components/ProfileSwitchSheet';
 import { Screen } from '@components/Screen';
 import { SectionCard } from '@components/SectionCard';
 import { useMedicationsList } from '@features/medications/hooks/useMedicationsList';
@@ -8,12 +9,13 @@ import type { Medication } from '@features/medications/types';
 import { useProfileDetail } from '@features/profiles/hooks/useProfileDetail';
 import { useReportsList } from '@features/reports/hooks/useReportsList';
 import type { Report } from '@features/reports/types';
+import { useAccountMe } from '@features/settings/hooks/useAccountMe';
 import { useVitalsList } from '@features/vitals/hooks/useVitalsList';
 import type { VitalEntry } from '@features/vitals/types';
 import { useNavigation } from '@react-navigation/native';
 import { useActiveProfileStore } from '@store/activeProfile.store';
 import { spacing, typography } from '@theme';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const calculateAge = (dateOfBirth: string): number => {
@@ -46,7 +48,9 @@ const VITAL_TYPE_LABELS: Record<string, string> = {
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation();
   const { activeProfileId } = useActiveProfileStore();
+  const [showProfileSheet, setShowProfileSheet] = useState(false);
 
+  const { data: account, isLoading: isLoadingAccount } = useAccountMe();
   const { data: profile, isLoading: isLoadingProfile } = useProfileDetail(activeProfileId);
   const { data: reportsData, isLoading: isLoadingReports } = useReportsList(activeProfileId, {
     limit: 3,
@@ -79,7 +83,28 @@ export const HomeScreen: React.FC = () => {
   }, [medicationsData]);
 
   const isLoading =
-    isLoadingProfile || isLoadingReports || isLoadingVitals || isLoadingMeds;
+    isLoadingAccount || isLoadingProfile || isLoadingReports || isLoadingVitals || isLoadingMeds;
+
+  // Extract first name from fullName
+  const firstName = useMemo(() => {
+    if (!account?.fullName) return null;
+    return account.fullName;
+  }, [account?.fullName]);
+
+  // Build sub-line with available info
+  const subLine = useMemo(() => {
+    const parts: string[] = [];
+    if (account?.dateOfBirth) {
+      parts.push(`${calculateAge(account.dateOfBirth)}y`);
+    }
+    if (account?.gender) {
+      parts.push(account.gender);
+    }
+    if (account?.bloodGroup) {
+      parts.push(account.bloodGroup);
+    }
+    return parts.join(' • ');
+  }, [account]);
 
   if (!activeProfileId) {
     return (
@@ -110,40 +135,36 @@ export const HomeScreen: React.FC = () => {
     <Screen scrollable>
       <AppHeader title="Welcome to Medi Notes" />
       
-      {/* Active Profile Card */}
-      {profile ? (
-        <SectionCard style={styles.profileCard}>
-          <View style={styles.profileHeader}>
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{profile.fullName}</Text>
-              <View style={styles.profileDetails}>
-                <Text style={styles.profileDetail}>
-                  Age {calculateAge(profile.dateOfBirth)}
-                </Text>
-                {profile.relationToAccount && (
-                  <Text style={styles.profileDetail}> • {profile.relationToAccount}</Text>
-                )}
-              </View>
-            </View>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Profiles' as never)}
-              style={styles.changeButton}
-            >
-              <Text style={styles.changeButtonText}>Change</Text>
-            </TouchableOpacity>
+      {/* Context Header */}
+      <SectionCard style={styles.contextHeader}>
+        <View style={styles.headerTop}>
+          <View style={styles.headerInfo}>
+            <Text style={styles.welcomeText}>
+              {firstName || 'User'}
+            </Text>
+            {subLine ? (
+              <Text style={styles.subLine}>{subLine}</Text>
+            ) : null}
           </View>
-        </SectionCard>
-      ) : (
-        <SectionCard style={styles.profileCard}>
-          <EmptyState
-            title="No profile selected"
-            description="Create or select a profile to get started"
-            actionLabel="Go to Profiles"
-            buttonStyle={styles.emptyStateButton}
-            onAction={() => navigation.navigate('Profiles' as never)}
-          />
-        </SectionCard>
-      )}
+        </View>
+        
+        <View style={styles.profileRow}>
+          <Text style={styles.profileLabel}>
+            Profile: <Text style={styles.profileName}>{profile?.name || 'Loading...'}</Text>
+          </Text>
+          <TouchableOpacity
+            onPress={() => setShowProfileSheet(true)}
+            style={styles.switchButton}
+          >
+            <Text style={styles.switchButtonText}>Switch</Text>
+          </TouchableOpacity>
+        </View>
+      </SectionCard>
+
+      <ProfileSwitchSheet
+        visible={showProfileSheet}
+        onClose={() => setShowProfileSheet(false)}
+      />
 
       {/* Appointments Section */}
       <SectionCard style={styles.sectionCard}>
@@ -282,34 +303,52 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  profileCard: {
+  contextHeader: {
     marginBottom: spacing.md,
   },
-  profileHeader: {
+  headerTop: {
+    marginBottom: spacing.md,
+  },
+  headerInfo: {
+    flex: 1,
+  },
+  welcomeText: {
+    ...typography.h2,
+    fontSize: 20,
+    marginBottom: spacing.xs,
+  },
+  subLine: {
+    ...typography.caption,
+    color: '#8E8E93',
+    fontSize: 16,
+  },
+  profileRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5EA',
   },
-  profileInfo: {
+  profileLabel: {
+    ...typography.body,
     flex: 1,
   },
   profileName: {
-    ...typography.h2,
-    marginBottom: spacing.xs,
-  },
-  profileDetails: {
-    flexDirection: 'row',
-  },
-  profileDetail: {
-    ...typography.caption,
-  },
-  changeButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  changeButtonText: {
     ...typography.bodyBold,
     color: '#007AFF',
+  },
+  switchButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    width: 85,
+  },
+  switchButtonText: {
+    ...typography.bodyBold,
+    color: '#007AFF',
+    width: '100%',
+    textAlign: 'right',
+
   },
   sectionCard: {
     marginBottom: spacing.md,

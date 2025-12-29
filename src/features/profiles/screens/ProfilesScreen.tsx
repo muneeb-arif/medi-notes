@@ -26,7 +26,7 @@ export const ProfilesScreen: React.FC = () => {
   const handleDelete = (profile: PersonProfile) => {
     Alert.alert(
       'Delete Profile',
-      `Are you sure you want to delete ${profile.fullName}? This action cannot be undone.`,
+      `Are you sure you want to delete ${profile.name}? This action cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -75,8 +75,12 @@ export const ProfilesScreen: React.FC = () => {
           style={styles.profileInfo}
           onPress={() => handleSelectProfile(item.id)}
         >
-          <Text style={styles.profileName}>{item.fullName}</Text>
-          <Text style={styles.profileRelation}>{item.relationToAccount}</Text>
+          <Text style={styles.profileName}>{item.name}</Text>
+          {item.notes && (
+            <Text style={styles.profileNotes} numberOfLines={1}>
+              {item.notes}
+            </Text>
+          )}
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.deleteButton}
@@ -97,9 +101,9 @@ export const ProfilesScreen: React.FC = () => {
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <EmptyState
-            icon="👤"
+            icon="📋"
             title="No profiles yet"
-            description="Profiles help you keep health records separate for each family member."
+            description="Create medical context profiles like Cardiology, Fertility, or Psychology to organize your health records."
             actionLabel="Add Profile"
             buttonStyle={styles.emptyStateButton}
             onAction={() => (navigation as any).navigate('ProfileEditor', { mode: 'create' })}
@@ -148,8 +152,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     marginBottom: spacing.xs,
   },
-  profileRelation: {
+  profileNotes: {
     ...typography.caption,
+    color: '#8E8E93',
   },
   deleteButton: {
     paddingHorizontal: spacing.md,

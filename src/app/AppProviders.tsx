@@ -1,5 +1,4 @@
 import { authApi } from '@features/auth/api/auth.api';
-import { profilesApi } from '@features/profiles/api/profiles.api';
 import { useActiveProfileStore } from '@store/activeProfile.store';
 import { useSessionStore } from '@store/session.store';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -30,7 +29,7 @@ interface AppProvidersProps {
 
 export const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
   const { hydrate, accessToken, refreshToken, setAccount, setTokens, clearSession } = useSessionStore();
-  const { hydrate: hydrateActiveProfile, setActiveProfileId, activeProfileId } = useActiveProfileStore();
+  const { hydrate: hydrateActiveProfile, ensureDefaultProfile } = useActiveProfileStore();
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
@@ -46,18 +45,8 @@ export const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
           const account = await authApi.getCurrentAccount();
           setAccount(account);
           
-          // Auto-select first profile if no active profile is set
-          const currentActiveProfileId = useActiveProfileStore.getState().activeProfileId;
-          if (!currentActiveProfileId) {
-            try {
-              const profiles = await profilesApi.list();
-              if (profiles.items && profiles.items.length > 0) {
-                await setActiveProfileId(profiles.items[0].id);
-              }
-            } catch {
-              // Silently fail - profile selection is not critical for app initialization
-            }
-          }
+          // Ensure default profile is selected (validates existing or selects new)
+          await ensureDefaultProfile();
         } catch (error) {
           const apiError = error as { status?: number };
           if (apiError.status === 401 && currentRefreshToken) {
@@ -67,18 +56,8 @@ export const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
               const account = await authApi.getCurrentAccount();
               setAccount(account);
               
-              // Auto-select first profile if no active profile is set
-              const currentActiveProfileId = useActiveProfileStore.getState().activeProfileId;
-              if (!currentActiveProfileId) {
-                try {
-                  const profiles = await profilesApi.list();
-                  if (profiles.items && profiles.items.length > 0) {
-                    await setActiveProfileId(profiles.items[0].id);
-                  }
-                } catch {
-                  // Silently fail - profile selection is not critical for app initialization
-                }
-              }
+              // Ensure default profile is selected (validates existing or selects new)
+              await ensureDefaultProfile();
             } catch {
               await clearSession();
             }

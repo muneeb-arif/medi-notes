@@ -179,13 +179,15 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     marginTop: spacing.md,
     marginBottom: spacing.xs,
-    flexShrink: 1,
-    flex: 1,
+    width: '100%',
+    textAlign: "center"
   },
   brandSubtitle: {
     fontSize: 14,
     color: '#FFFFFF',
     opacity: 0.9,
+    width: "100%",
+    textAlign: "center"
   },
   formCard: {
     backgroundColor: '#FFFFFF',
