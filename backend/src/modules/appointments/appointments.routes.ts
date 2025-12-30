@@ -64,22 +64,22 @@ router.use(authMiddleware);
  *       401:
  *         $ref: '#/components/responses/Error'
  */
-router.post('/:profileId/appointments', appointmentsController.create);
+router.post('/', appointmentsController.create);
 
 /**
  * @swagger
- * /profiles/{profileId}/appointments:
+ * /appointments:
  *   get:
  *     summary: List appointments
  *     tags: [Appointments]
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
+ *       - in: query
  *         name: profileId
- *         required: true
  *         schema:
  *           type: string
+ *         description: Optional profile ID to filter appointments
  *       - in: query
  *         name: status
  *         schema:
@@ -129,22 +129,17 @@ router.post('/:profileId/appointments', appointmentsController.create);
  *       401:
  *         $ref: '#/components/responses/Error'
  */
-router.get('/:profileId/appointments', appointmentsController.list);
+router.get('/', appointmentsController.list);
 
 /**
  * @swagger
- * /profiles/{profileId}/appointments/{appointmentId}:
+ * /appointments/{appointmentId}:
  *   get:
  *     summary: Get appointment by ID
  *     tags: [Appointments]
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: profileId
- *         required: true
- *         schema:
- *           type: string
  *       - in: path
  *         name: appointmentId
  *         required: true
@@ -162,22 +157,17 @@ router.get('/:profileId/appointments', appointmentsController.list);
  *       404:
  *         $ref: '#/components/responses/Error'
  */
-router.get('/:profileId/appointments/:appointmentId', appointmentsController.getById);
+router.get('/:appointmentId', appointmentsController.getById);
 
 /**
  * @swagger
- * /profiles/{profileId}/appointments/{appointmentId}:
+ * /appointments/{appointmentId}:
  *   put:
  *     summary: Update appointment
  *     tags: [Appointments]
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: profileId
- *         required: true
- *         schema:
- *           type: string
  *       - in: path
  *         name: appointmentId
  *         required: true
@@ -225,22 +215,17 @@ router.get('/:profileId/appointments/:appointmentId', appointmentsController.get
  *       404:
  *         $ref: '#/components/responses/Error'
  */
-router.put('/:profileId/appointments/:appointmentId', appointmentsController.update);
+router.put('/:appointmentId', appointmentsController.update);
 
 /**
  * @swagger
- * /profiles/{profileId}/appointments/{appointmentId}:
+ * /appointments/{appointmentId}:
  *   delete:
  *     summary: Delete appointment
  *     tags: [Appointments]
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: profileId
- *         required: true
- *         schema:
- *           type: string
  *       - in: path
  *         name: appointmentId
  *         required: true
@@ -254,7 +239,7 @@ router.put('/:profileId/appointments/:appointmentId', appointmentsController.upd
  *       404:
  *         $ref: '#/components/responses/Error'
  */
-router.delete('/:profileId/appointments/:appointmentId', appointmentsController.delete);
+router.delete('/:appointmentId', appointmentsController.delete);
 
 export default router;
 

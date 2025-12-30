@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import React from 'react';
+import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   ActivityIndicator,
@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { z } from 'zod';
 import { Screen } from '@components/Screen';
 import { SectionCard } from '@components/SectionCard';
@@ -73,12 +74,39 @@ const getDefaultUnit = (type: VitalType): string => {
   }
 };
 
+const formatDateTime = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const formatDateTimeDisplay = (dateString: string): string => {
+  if (!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  } catch {
+    return dateString;
+  }
+};
+
 export const AddVitalScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const profileId = (route.params as { profileId: string })?.profileId;
   const createVital = useCreateVital(profileId);
   const [selectedType, setSelectedType] = React.useState<VitalType>('blood_pressure');
+  const [showDateTimePicker, setShowDateTimePicker] = useState(false);
+  const [dateTimePickerMode, setDateTimePickerMode] = useState<'date' | 'time'>('date');
   const schema = React.useMemo(() => createVitalSchema(selectedType), [selectedType]);
 
   const {
@@ -86,6 +114,8 @@ export const AddVitalScreen: React.FC = () => {
     handleSubmit,
     formState: { errors },
     reset,
+    setValue,
+    watch,
   } = useForm<VitalFormData>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -93,10 +123,12 @@ export const AddVitalScreen: React.FC = () => {
       systolic: 120,
       diastolic: 80,
       unit: 'mmHg',
-      recordedAt: new Date().toISOString().slice(0, 16),
+      recordedAt: formatDateTime(new Date()),
       notes: '',
     },
   });
+
+  const recordedAtValue = watch('recordedAt');
 
   React.useEffect(() => {
     const defaultUnit = getDefaultUnit(selectedType);
@@ -106,7 +138,7 @@ export const AddVitalScreen: React.FC = () => {
         systolic: 120,
         diastolic: 80,
         unit: defaultUnit,
-        recordedAt: new Date().toISOString().slice(0, 16),
+        recordedAt: formatDateTime(new Date()),
         notes: '',
       });
     } else {
@@ -114,11 +146,54 @@ export const AddVitalScreen: React.FC = () => {
         type: selectedType,
         value: 0,
         unit: defaultUnit,
-        recordedAt: new Date().toISOString().slice(0, 16),
+        recordedAt: formatDateTime(new Date()),
         notes: '',
       });
     }
   }, [selectedType, reset]);
+
+  const getRecordedAtDate = (): Date => {
+    if (recordedAtValue) {
+      try {
+        return new Date(recordedAtValue);
+      } catch {
+        return new Date();
+      }
+    }
+    return new Date();
+  };
+
+  const handleDateTimeChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      if (event.type === 'dismissed') {
+        setShowDateTimePicker(false);
+        return;
+      }
+      if (event.type === 'set' && selectedDate) {
+        const currentDate = getRecordedAtDate();
+        let newDate: Date;
+        
+        if (dateTimePickerMode === 'date') {
+          newDate = new Date(selectedDate);
+          newDate.setHours(currentDate.getHours());
+          newDate.setMinutes(currentDate.getMinutes());
+          setValue('recordedAt', formatDateTime(newDate), { shouldValidate: true });
+          setDateTimePickerMode('time');
+        } else {
+          newDate = new Date(currentDate);
+          newDate.setHours(selectedDate.getHours());
+          newDate.setMinutes(selectedDate.getMinutes());
+          setValue('recordedAt', formatDateTime(newDate), { shouldValidate: true });
+          setShowDateTimePicker(false);
+          setDateTimePickerMode('date');
+        }
+      }
+    } else {
+      if (selectedDate) {
+        setValue('recordedAt', formatDateTime(selectedDate), { shouldValidate: true });
+      }
+    }
+  };
 
   const onSubmit = async (data: VitalFormData) => {
     try {
@@ -242,16 +317,46 @@ export const AddVitalScreen: React.FC = () => {
               <Controller
                 control={control}
                 name="recordedAt"
-                render={({ field: { onChange, value } }) => (
+                render={({ field: { value } }) => (
                   <>
-                    <TextInput
-                      style={[styles.input, errors.recordedAt && styles.inputError]}
-                      value={value}
-                      onChangeText={onChange}
-                      placeholder="YYYY-MM-DDTHH:mm"
-                    />
+                    <TouchableOpacity
+                      style={[
+                        styles.input,
+                        styles.dateInput,
+                        errors.recordedAt && styles.inputError,
+                      ]}
+                      onPress={() => {
+                        if (Platform.OS === 'android') {
+                          setDateTimePickerMode('date');
+                        }
+                        setShowDateTimePicker(true);
+                      }}
+                      disabled={createVital.isPending}
+                    >
+                      <Text style={[styles.dateText, !value && styles.placeholderText]}>
+                        {value ? formatDateTimeDisplay(value) : 'Select date & time'}
+                      </Text>
+                    </TouchableOpacity>
+                    {showDateTimePicker && (
+                      <>
+                        <DateTimePicker
+                          value={getRecordedAtDate()}
+                          mode={Platform.OS === 'android' ? dateTimePickerMode : 'datetime'}
+                          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                          onChange={handleDateTimeChange}
+                          maximumDate={new Date()}
+                        />
+                        {Platform.OS === 'ios' && (
+                          <TouchableOpacity
+                            style={styles.datePickerButton}
+                            onPress={() => setShowDateTimePicker(false)}
+                          >
+                            <Text style={styles.datePickerButtonText}>Done</Text>
+                          </TouchableOpacity>
+                        )}
+                      </>
+                    )}
                     {errors.recordedAt && <Text style={styles.errorText}>{errors.recordedAt.message}</Text>}
-                    <Text style={styles.helperText}>Format: YYYY-MM-DDTHH:mm (e.g., 2025-07-26T10:00)</Text>
                   </>
                 )}
               />
@@ -365,5 +470,27 @@ const styles = StyleSheet.create({
   submitButton: {
     marginTop: spacing.lg,
     marginBottom: spacing.xl,
+  },
+  dateInput: {
+    justifyContent: 'center',
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#000000',
+  },
+  placeholderText: {
+    color: '#8E8E93',
+  },
+  datePickerButton: {
+    marginTop: spacing.sm,
+    padding: spacing.md,
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  datePickerButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

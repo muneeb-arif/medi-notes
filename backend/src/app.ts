@@ -40,7 +40,7 @@ app.use('/api/v1/profiles', profilesRoutes);
 app.use('/api/v1/profiles', reportsRoutes);
 app.use('/api/v1/profiles', vitalsRoutes);
 app.use('/api/v1/profiles', medicationsRoutes);
-app.use('/api/v1/profiles', appointmentsRoutes);
+app.use('/api/v1/appointments', appointmentsRoutes);
 
 // Fake upload endpoint (must be before error handler, no auth required)
 // Use regex to match any path after /fake-upload/

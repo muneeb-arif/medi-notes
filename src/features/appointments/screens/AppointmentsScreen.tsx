@@ -1,20 +1,20 @@
+import { EmptyState } from '@components/EmptyState';
+import { Screen } from '@components/Screen';
 import { useNavigation } from '@react-navigation/native';
 import { useActiveProfileStore } from '@store/activeProfile.store';
+import { typography } from '@theme';
 import React, { useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import { Screen } from '@components/Screen';
-import { EmptyState } from '@components/EmptyState';
-import { spacing, typography } from '@theme';
-import { useDeleteAppointment } from '../hooks/useDeleteAppointment';
 import { useAppointmentsList } from '../hooks/useAppointmentsList';
+import { useDeleteAppointment } from '../hooks/useDeleteAppointment';
 import type { Appointment } from '../types';
 
 type FilterType = 'upcoming' | 'past' | 'all';
@@ -24,7 +24,7 @@ export const AppointmentsScreen: React.FC = () => {
   const { activeProfileId } = useActiveProfileStore();
   const [filter, setFilter] = useState<FilterType>('upcoming');
   const { data, isLoading, error } = useAppointmentsList(activeProfileId);
-  const deleteAppointment = useDeleteAppointment(activeProfileId || '');
+  const deleteAppointment = useDeleteAppointment();
 
   const { upcoming, past } = useMemo(() => {
     if (!data?.items) return { upcoming: [], past: [] };
@@ -74,24 +74,10 @@ export const AppointmentsScreen: React.FC = () => {
 
   const handleSelectAppointment = (appointment: Appointment) => {
     navigation.navigate('AppointmentEditor' as never, {
-      profileId: activeProfileId,
       appointmentId: appointment.id,
       mode: 'edit',
     } as never);
   };
-
-  if (!activeProfileId) {
-    return (
-      <Screen>
-        <EmptyState
-          title="No active profile selected"
-          description="Select or create a profile to manage appointments"
-          actionLabel="Go to Profiles"
-          onAction={() => navigation.navigate('Profiles' as never)}
-        />
-      </Screen>
-    );
-  }
 
   if (isLoading) {
     return (
@@ -104,10 +90,21 @@ export const AppointmentsScreen: React.FC = () => {
   }
 
   if (error) {
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : typeof error === 'object' && error !== null && 'message' in error
+          ? String((error as { message: string }).message)
+          : 'Failed to load appointments';
     return (
       <Screen>
         <View style={styles.centerContainer}>
           <Text style={styles.errorText}>Failed to load appointments</Text>
+          {__DEV__ && (
+            <Text style={[styles.errorText, { fontSize: 12, marginTop: 8, textAlign: 'center' }]}>
+              {errorMessage}
+            </Text>
+          )}
         </View>
       </Screen>
     );
@@ -150,7 +147,6 @@ export const AppointmentsScreen: React.FC = () => {
           actionLabel="Add Appointment"
           onAction={() =>
             navigation.navigate('AppointmentEditor' as never, {
-              profileId: activeProfileId,
               mode: 'create',
             } as never)
           }
@@ -190,7 +186,6 @@ export const AppointmentsScreen: React.FC = () => {
             style={styles.fab}
             onPress={() =>
               navigation.navigate('AppointmentEditor' as never, {
-                profileId: activeProfileId,
                 mode: 'create',
               } as never)
             }

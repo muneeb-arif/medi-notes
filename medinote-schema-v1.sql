@@ -165,6 +165,27 @@ CREATE TABLE medications (
 );
 
 -- =====================================================
+-- APPOINTMENTS
+-- =====================================================
+
+CREATE TABLE appointments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    profile_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+
+    title TEXT NOT NULL,
+    specialty TEXT,
+    doctor_name TEXT,
+    facility TEXT,
+    location TEXT,
+    start_at TIMESTAMP NOT NULL,
+    end_at TIMESTAMP,
+    status TEXT CHECK (status IN ('scheduled', 'completed', 'cancelled')) NOT NULL DEFAULT 'scheduled',
+    notes TEXT,
+
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- =====================================================
 -- PROCEDURES
 -- =====================================================
 

@@ -3,18 +3,22 @@ import { appointmentsApi } from '../api/appointments.api';
 import type { AppointmentsListParams } from '../types';
 
 export const useAppointmentsList = (
-  profileId: string | null,
+  activeProfileId: string | null | undefined,
   params?: AppointmentsListParams
 ) => {
   return useQuery({
-    queryKey: ['appointments', 'list', profileId, params],
-    queryFn: () => {
-      if (!profileId) {
-        throw new Error('Profile ID is required');
+    queryKey: ['appointments', 'list', activeProfileId, params],
+    queryFn: async () => {
+      try {
+        return await appointmentsApi.list(activeProfileId, params);
+      } catch (error) {
+        if (__DEV__) {
+          console.error('Appointments list error:', error);
+        }
+        throw error;
       }
-      return appointmentsApi.list(profileId, params);
     },
-    enabled: !!profileId,
+    retry: 1,
   });
 };
 

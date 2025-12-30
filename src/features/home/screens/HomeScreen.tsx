@@ -4,6 +4,8 @@ import { ListRow } from '@components/ListRow';
 import { ProfileSwitchSheet } from '@components/ProfileSwitchSheet';
 import { Screen } from '@components/Screen';
 import { SectionCard } from '@components/SectionCard';
+import { useAppointmentsList } from '@features/appointments/hooks/useAppointmentsList';
+import type { Appointment } from '@features/appointments/types';
 import { useMedicationsList } from '@features/medications/hooks/useMedicationsList';
 import type { Medication } from '@features/medications/types';
 import { useProfileDetail } from '@features/profiles/hooks/useProfileDetail';
@@ -62,6 +64,10 @@ export const HomeScreen: React.FC = () => {
     activeProfileId,
     { status: 'ongoing', limit: 50 }
   );
+  const { data: appointmentsData, isLoading: isLoadingAppointments } = useAppointmentsList(
+    activeProfileId,
+    { limit: 20 }
+  );
 
   const recentReports = useMemo(() => {
     if (!reportsData?.items) return [];
@@ -82,8 +88,44 @@ export const HomeScreen: React.FC = () => {
     return medicationsData.items.filter((m) => m.status === 'ongoing');
   }, [medicationsData]);
 
+  const recentAppointments = useMemo(() => {
+    if (!appointmentsData?.items) return [];
+    const now = new Date();
+    const upcoming = appointmentsData.items
+      .filter((apt) => {
+        const startDate = new Date(apt.startAt);
+        return startDate >= now && apt.status === 'scheduled';
+      })
+      .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
+      .slice(0, 2);
+
+    if (upcoming.length > 0) {
+      return upcoming;
+    }
+
+    // If no upcoming, return latest 2
+    return [...appointmentsData.items]
+      .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime())
+      .slice(0, 2);
+  }, [appointmentsData]);
+
+  const formatAppointmentDateTime = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  };
+
   const isLoading =
-    isLoadingAccount || isLoadingProfile || isLoadingReports || isLoadingVitals || isLoadingMeds;
+    isLoadingAccount ||
+    isLoadingProfile ||
+    isLoadingReports ||
+    isLoadingVitals ||
+    isLoadingMeds ||
+    isLoadingAppointments;
 
   // Extract first name from fullName
   const firstName = useMemo(() => {
@@ -181,17 +223,24 @@ export const HomeScreen: React.FC = () => {
             <Text style={styles.viewAllText}>View all</Text>
           </TouchableOpacity>
         </View>
-        <ListRow
-          title="Manage Appointments"
-          subtitle="View and schedule appointments"
-          onPress={() => {
-            const appNavigator = navigation.getParent();
-            if (appNavigator) {
-              appNavigator.navigate('Appointments' as never);
-            }
-          }}
-          showDivider={false}
-        />
+        {recentAppointments.length === 0 ? (
+          <Text style={styles.emptySectionText}>No appointments yet</Text>
+        ) : (
+          recentAppointments.map((appointment: Appointment, index: number) => (
+            <ListRow
+              key={appointment.id}
+              title={appointment.doctorName ? `Dr. ${appointment.doctorName}` : appointment.title}
+              subtitle={formatAppointmentDateTime(appointment.startAt)}
+              onPress={() => {
+                const appNavigator = navigation.getParent();
+                if (appNavigator) {
+                  appNavigator.navigate('Appointments' as never);
+                }
+              }}
+              showDivider={index < recentAppointments.length - 1}
+            />
+          ))
+        )}
       </SectionCard>
 
       {/* Reports Section */}
@@ -199,7 +248,10 @@ export const HomeScreen: React.FC = () => {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Recent Reports</Text>
           <TouchableOpacity
-            onPress={() => navigation.getParent()?.navigate('Reports' as never)}
+            onPress={() => {
+              // Navigate to Reports tab in the same tab navigator
+              (navigation as any).navigate('Reports');
+            }}
           >
             <Text style={styles.viewAllText}>View all</Text>
           </TouchableOpacity>
@@ -213,16 +265,14 @@ export const HomeScreen: React.FC = () => {
               title={report.title}
               subtitle={`${report.type} • ${new Date(report.reportDate).toLocaleDateString()}`}
               onPress={() => {
-                const parent = navigation.getParent();
-                if (parent) {
-                  (parent as any).navigate('Reports', {
-                    screen: 'ReportViewer',
-                    params: {
-                      profileId: activeProfileId,
-                      reportId: report.id,
-                    },
-                  });
-                }
+                // Navigate to Reports tab, then to ReportViewer screen
+                (navigation as any).navigate('Reports', {
+                  screen: 'ReportViewer',
+                  params: {
+                    profileId: activeProfileId,
+                    reportId: report.id,
+                  },
+                });
               }}
               showDivider={index < recentReports.length - 1}
             />
@@ -235,7 +285,10 @@ export const HomeScreen: React.FC = () => {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Recent Vitals</Text>
           <TouchableOpacity
-            onPress={() => navigation.getParent()?.navigate('Vitals' as never)}
+            onPress={() => {
+              // Navigate to Vitals tab in the same tab navigator
+              (navigation as any).navigate('Vitals');
+            }}
           >
             <Text style={styles.viewAllText}>View all</Text>
           </TouchableOpacity>
@@ -248,7 +301,10 @@ export const HomeScreen: React.FC = () => {
               key={vital.id}
               title={VITAL_TYPE_LABELS[vital.type] || vital.type}
               subtitle={`${formatVitalValue(vital)} • ${new Date(vital.recordedAt).toLocaleDateString()}`}
-              onPress={() => navigation.getParent()?.navigate('Vitals' as never)}
+              onPress={() => {
+                // Navigate to Vitals tab in the same tab navigator
+                (navigation as any).navigate('Vitals');
+              }}
               showDivider={index < recentVitals.length - 1}
             />
           ))

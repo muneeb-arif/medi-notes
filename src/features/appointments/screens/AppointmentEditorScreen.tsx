@@ -1,11 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import React from 'react';
+import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
   Platform,
   StyleSheet,
   Text,
@@ -13,11 +12,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { z } from 'zod';
 import { Screen } from '@components/Screen';
 import { SectionCard } from '@components/SectionCard';
 import { PrimaryButton } from '@components/PrimaryButton';
 import { spacing, typography } from '@theme';
+import { useActiveProfileStore } from '@store/activeProfile.store';
 import { useCreateAppointment } from '../hooks/useCreateAppointment';
 import { useUpdateAppointment } from '../hooks/useUpdateAppointment';
 import { useAppointmentDetail } from '../hooks/useAppointmentDetail';
@@ -43,25 +44,68 @@ const STATUS_OPTIONS: { value: AppointmentStatus; label: string }[] = [
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
+const formatDateTime = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const formatDateTimeDisplay = (dateString: string): string => {
+  if (!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  } catch {
+    return dateString;
+  }
+};
+
 export const AppointmentEditorScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const profileId = (route.params as { profileId: string })?.profileId;
+  const { activeProfileId } = useActiveProfileStore();
   const appointmentId = (route.params as { appointmentId?: string })?.appointmentId;
   const mode = (route.params as { mode?: string })?.mode || 'create';
 
-  const createAppointment = useCreateAppointment(profileId);
-  const updateAppointment = useUpdateAppointment(profileId);
+  const createAppointment = useCreateAppointment(activeProfileId);
+  const updateAppointment = useUpdateAppointment();
   const { data: existingAppointment, isLoading: isLoadingAppointment } = useAppointmentDetail(
-    profileId,
     mode === 'edit' ? appointmentId || null : null
   );
+
+  // Default start time: now + 24 hours
+  const getDefaultStartTime = () => {
+    const date = new Date();
+    date.setHours(date.getHours() + 24);
+    // Round to nearest 15 minutes
+    const minutes = date.getMinutes();
+    date.setMinutes(Math.round(minutes / 15) * 15);
+    date.setSeconds(0);
+    date.setMilliseconds(0);
+    return date;
+  };
+
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
+  const [startPickerMode, setStartPickerMode] = useState<'date' | 'time'>('date');
+  const [endPickerMode, setEndPickerMode] = useState<'date' | 'time'>('date');
 
   const {
     control,
     handleSubmit,
     formState: { errors },
     reset,
+    setValue,
+    watch,
   } = useForm<AppointmentFormData>({
     resolver: zodResolver(appointmentSchema),
     defaultValues: {
@@ -70,12 +114,15 @@ export const AppointmentEditorScreen: React.FC = () => {
       doctorName: '',
       facility: '',
       location: '',
-      startAt: new Date().toISOString().slice(0, 16),
+      startAt: formatDateTime(getDefaultStartTime()),
       endAt: '',
       status: 'scheduled',
       notes: '',
     },
   });
+
+  const startAtValue = watch('startAt');
+  const endAtValue = watch('endAt');
 
   React.useEffect(() => {
     if (existingAppointment && mode === 'edit') {
@@ -92,6 +139,100 @@ export const AppointmentEditorScreen: React.FC = () => {
       });
     }
   }, [existingAppointment, mode, reset]);
+
+  const handleStartDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      if (event.type === 'dismissed') {
+        setShowStartPicker(false);
+        return;
+      }
+      if (event.type === 'set' && selectedDate) {
+        const currentDate = getStartDate();
+        let newDate: Date;
+        
+        if (startPickerMode === 'date') {
+          // User selected a date, now show time picker
+          newDate = new Date(selectedDate);
+          newDate.setHours(currentDate.getHours());
+          newDate.setMinutes(currentDate.getMinutes());
+          setValue('startAt', formatDateTime(newDate), { shouldValidate: true });
+          setStartPickerMode('time');
+          // Keep picker open for time selection
+        } else {
+          // User selected a time, combine with existing date and close
+          newDate = new Date(currentDate);
+          newDate.setHours(selectedDate.getHours());
+          newDate.setMinutes(selectedDate.getMinutes());
+          setValue('startAt', formatDateTime(newDate), { shouldValidate: true });
+          setShowStartPicker(false);
+          setStartPickerMode('date'); // Reset for next time
+        }
+      }
+    } else {
+      // iOS
+      if (selectedDate) {
+        setValue('startAt', formatDateTime(selectedDate), { shouldValidate: true });
+      }
+    }
+  };
+
+  const handleEndDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      if (event.type === 'dismissed') {
+        setShowEndPicker(false);
+        return;
+      }
+      if (event.type === 'set' && selectedDate) {
+        const currentDate = getEndDate();
+        let newDate: Date;
+        
+        if (endPickerMode === 'date') {
+          // User selected a date, now show time picker
+          newDate = new Date(selectedDate);
+          newDate.setHours(currentDate.getHours());
+          newDate.setMinutes(currentDate.getMinutes());
+          setValue('endAt', formatDateTime(newDate), { shouldValidate: true });
+          setEndPickerMode('time');
+          // Keep picker open for time selection
+        } else {
+          // User selected a time, combine with existing date and close
+          newDate = new Date(currentDate);
+          newDate.setHours(selectedDate.getHours());
+          newDate.setMinutes(selectedDate.getMinutes());
+          setValue('endAt', formatDateTime(newDate), { shouldValidate: true });
+          setShowEndPicker(false);
+          setEndPickerMode('date'); // Reset for next time
+        }
+      }
+    } else {
+      // iOS
+      if (selectedDate) {
+        setValue('endAt', formatDateTime(selectedDate), { shouldValidate: true });
+      }
+    }
+  };
+
+  const getStartDate = (): Date => {
+    if (startAtValue) {
+      try {
+        return new Date(startAtValue);
+      } catch {
+        return getDefaultStartTime();
+      }
+    }
+    return getDefaultStartTime();
+  };
+
+  const getEndDate = (): Date => {
+    if (endAtValue) {
+      try {
+        return new Date(endAtValue);
+      } catch {
+        return new Date();
+      }
+    }
+    return new Date();
+  };
 
   const onSubmit = async (data: AppointmentFormData) => {
     try {
@@ -133,11 +274,7 @@ export const AppointmentEditorScreen: React.FC = () => {
 
   return (
     <Screen scrollable padding="none">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        <View style={styles.content}>
+      <View style={styles.content}>
           {/* Appointment Details */}
           <SectionCard style={styles.section}>
             <Text style={styles.sectionTitle}>Appointment Details</Text>
@@ -166,16 +303,46 @@ export const AppointmentEditorScreen: React.FC = () => {
               <Controller
                 control={control}
                 name="startAt"
-                render={({ field: { onChange, value } }) => (
+                render={({ field: { value } }) => (
                   <>
-                    <TextInput
-                      style={[styles.input, errors.startAt && styles.inputError]}
-                      value={value}
-                      onChangeText={onChange}
-                      placeholder="YYYY-MM-DDTHH:mm"
-                    />
+                    <TouchableOpacity
+                      style={[
+                        styles.input,
+                        styles.dateInput,
+                        errors.startAt && styles.inputError,
+                      ]}
+                      onPress={() => {
+                        if (Platform.OS === 'android') {
+                          setStartPickerMode('date');
+                        }
+                        setShowStartPicker(true);
+                      }}
+                      disabled={isLoading}
+                    >
+                      <Text style={[styles.dateText, !value && styles.placeholderText]}>
+                        {value ? formatDateTimeDisplay(value) : 'Select start date & time'}
+                      </Text>
+                    </TouchableOpacity>
+                    {showStartPicker && (
+                      <>
+                        <DateTimePicker
+                          value={getStartDate()}
+                          mode={Platform.OS === 'android' ? startPickerMode : 'datetime'}
+                          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                          onChange={handleStartDateChange}
+                          minimumDate={new Date()}
+                        />
+                        {Platform.OS === 'ios' && (
+                          <TouchableOpacity
+                            style={styles.datePickerButton}
+                            onPress={() => setShowStartPicker(false)}
+                          >
+                            <Text style={styles.datePickerButtonText}>Done</Text>
+                          </TouchableOpacity>
+                        )}
+                      </>
+                    )}
                     {errors.startAt && <Text style={styles.errorText}>{errors.startAt.message}</Text>}
-                    <Text style={styles.helperText}>Format: YYYY-MM-DDTHH:mm (e.g., 2025-07-26T10:00)</Text>
                   </>
                 )}
               />
@@ -186,15 +353,41 @@ export const AppointmentEditorScreen: React.FC = () => {
               <Controller
                 control={control}
                 name="endAt"
-                render={({ field: { onChange, value } }) => (
+                render={({ field: { value } }) => (
                   <>
-                    <TextInput
-                      style={styles.input}
-                      value={value || ''}
-                      onChangeText={onChange}
-                      placeholder="YYYY-MM-DDTHH:mm"
-                    />
-                    <Text style={styles.helperText}>Format: YYYY-MM-DDTHH:mm</Text>
+                    <TouchableOpacity
+                      style={[styles.input, styles.dateInput]}
+                      onPress={() => {
+                        if (Platform.OS === 'android') {
+                          setEndPickerMode('date');
+                        }
+                        setShowEndPicker(true);
+                      }}
+                      disabled={isLoading}
+                    >
+                      <Text style={[styles.dateText, !value && styles.placeholderText]}>
+                        {value ? formatDateTimeDisplay(value) : 'Select end date & time (optional)'}
+                      </Text>
+                    </TouchableOpacity>
+                    {showEndPicker && (
+                      <>
+                        <DateTimePicker
+                          value={getEndDate()}
+                          mode={Platform.OS === 'android' ? endPickerMode : 'datetime'}
+                          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                          onChange={handleEndDateChange}
+                          minimumDate={startAtValue ? new Date(startAtValue) : new Date()}
+                        />
+                        {Platform.OS === 'ios' && (
+                          <TouchableOpacity
+                            style={styles.datePickerButton}
+                            onPress={() => setShowEndPicker(false)}
+                          >
+                            <Text style={styles.datePickerButtonText}>Done</Text>
+                          </TouchableOpacity>
+                        )}
+                      </>
+                    )}
                   </>
                 )}
               />
@@ -321,18 +514,14 @@ export const AppointmentEditorScreen: React.FC = () => {
             style={styles.submitButton}
           />
         </View>
-      </KeyboardAvoidingView>
     </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  keyboardView: {
-    flex: 1,
-  },
   content: {
     padding: spacing.md,
-    paddingBottom: 120,
+    paddingBottom: 200,
   },
   centerContainer: {
     flex: 1,
@@ -404,5 +593,27 @@ const styles = StyleSheet.create({
   submitButton: {
     marginTop: spacing.lg,
     marginBottom: spacing.xl,
+  },
+  dateInput: {
+    justifyContent: 'center',
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#000000',
+  },
+  placeholderText: {
+    color: '#8E8E93',
+  },
+  datePickerButton: {
+    marginTop: spacing.sm,
+    padding: spacing.md,
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  datePickerButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
