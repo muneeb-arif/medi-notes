@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "my-medi-logs",
-    "slug": "my-medi-logs",
+    "name": "medinotes",
+    "slug": "medinotes",
     "version": "1.0.0",
     "extra": {
       "apiBaseURL": "http://192.168.1.53:3000/api/v1"
     },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mymedilogs",
+    "scheme": "medinotes",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {

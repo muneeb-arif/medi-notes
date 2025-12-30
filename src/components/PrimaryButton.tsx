@@ -49,6 +49,7 @@ const styles = StyleSheet.create({
     ...typography.bodyBold,
     color: '#FFFFFF',
     textAlign: 'center',
+    width: '100%',
   },
 });
 

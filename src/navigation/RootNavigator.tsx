@@ -1,21 +1,45 @@
+import { AccountInfoScreen } from '@features/auth/screens/AccountInfoScreen';
 import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useSessionStore } from '@store/session.store';
 import React from 'react';
-import { AuthNavigator } from './AuthNavigator';
+import { ActivityIndicator, View } from 'react-native';
 import { AppNavigator } from './AppNavigator';
+import { AuthNavigator } from './AuthNavigator';
+
+const Stack = createNativeStackNavigator();
 
 export const RootNavigator: React.FC = () => {
-  const { accessToken, isHydrated } = useSessionStore();
+  const { accessToken, account, isHydrated } = useSessionStore();
   const isAuthenticated = !!accessToken;
+  const requiresOnboarding = account?.requiresOnboarding ?? false;
 
   if (!isHydrated) {
-    return null;
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
   }
 
   return (
     <NavigationContainer>
-      {isAuthenticated ? <AppNavigator /> : <AuthNavigator />}
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {!isAuthenticated ? (
+          <Stack.Screen name="Auth" component={AuthNavigator} />
+        ) : requiresOnboarding ? (
+          <Stack.Screen
+            name="AccountInfo"
+            component={AccountInfoScreen}
+            options={{
+              gestureEnabled: false,
+              headerBackVisible: false,
+            }}
+          />
+        ) : (
+          <Stack.Screen name="App" component={AppNavigator} />
+        )}
+      </Stack.Navigator>
     </NavigationContainer>
   );
 };
-

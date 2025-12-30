@@ -29,7 +29,7 @@ interface AppProvidersProps {
 
 export const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
   const { hydrate, accessToken, refreshToken, setAccount, setTokens, clearSession } = useSessionStore();
-  const { hydrate: hydrateActiveProfile } = useActiveProfileStore();
+  const { hydrate: hydrateActiveProfile, ensureDefaultProfile } = useActiveProfileStore();
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
@@ -44,6 +44,9 @@ export const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
         try {
           const account = await authApi.getCurrentAccount();
           setAccount(account);
+          
+          // Ensure default profile is selected (validates existing or selects new)
+          await ensureDefaultProfile();
         } catch (error) {
           const apiError = error as { status?: number };
           if (apiError.status === 401 && currentRefreshToken) {
@@ -52,6 +55,9 @@ export const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
               await setTokens(newTokens);
               const account = await authApi.getCurrentAccount();
               setAccount(account);
+              
+              // Ensure default profile is selected (validates existing or selects new)
+              await ensureDefaultProfile();
             } catch {
               await clearSession();
             }

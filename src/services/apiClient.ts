@@ -1,20 +1,32 @@
+import { authApi } from '@features/auth/api/auth.api';
 import { useSessionStore } from '@store/session.store';
 import Constants from 'expo-constants';
 
-const baseURL = Constants.expoConfig?.extra?.apiBaseURL || process.env.EXPO_PUBLIC_API_BASE_URL || '';
+const baseURL =
+  process.env.EXPO_PUBLIC_API_BASE_URL || Constants.expoConfig?.extra?.apiBaseURL || '';
 
 interface RequestConfig extends RequestInit {
   headers?: HeadersInit;
 }
 
-interface ApiError {
+export interface ApiError {
   message: string;
-  code?: string;
+  code: string;
   status?: number;
 }
 
+// OTP-specific error code mappings
+// Maps backend codes to clean UI-friendly codes
+const OTP_ERROR_CODE_MAP: Record<string, string> = {
+  OTP_EXPIRED: 'expired_otp',
+  OTP_MAX_ATTEMPTS: 'too_many_attempts',
+  INVALID_OTP: 'invalid_otp',
+};
+
 class ApiClient {
   private baseURL: string;
+  private isRefreshing = false;
+  private refreshPromise: Promise<void> | null = null;
 
   constructor(baseURL: string) {
     this.baseURL = baseURL;
@@ -24,20 +36,96 @@ class ApiClient {
     return useSessionStore.getState().accessToken;
   }
 
-  private sanitizeError(error: unknown): ApiError {
+  private getRefreshToken(): string | null {
+    return useSessionStore.getState().refreshToken;
+  }
+
+  private async clearSession(): Promise<void> {
+    await useSessionStore.getState().clearSession();
+  }
+
+  /**
+   * Attempts to refresh the access token using the refresh token.
+   * Returns true if refresh was successful, false otherwise.
+   */
+  private async refreshAccessToken(): Promise<boolean> {
+    // If already refreshing, wait for the existing refresh to complete
+    if (this.isRefreshing && this.refreshPromise) {
+      await this.refreshPromise;
+      return this.getAuthToken() !== null;
+    }
+
+    this.isRefreshing = true;
+    this.refreshPromise = (async () => {
+      try {
+        const refreshToken = this.getRefreshToken();
+        if (!refreshToken) {
+          await this.clearSession();
+          return;
+        }
+
+        const response = await authApi.refreshToken({ refreshToken });
+        await useSessionStore.getState().setTokens(response);
+      } catch {
+        // Refresh failed - clear session and log out user
+        await this.clearSession();
+      } finally {
+        this.isRefreshing = false;
+        this.refreshPromise = null;
+      }
+    })();
+
+    await this.refreshPromise;
+    return this.getAuthToken() !== null;
+  }
+
+  /**
+   * Normalizes API errors into a consistent format.
+   * Strips stack traces and internal error details.
+   */
+  private normalizeError(error: unknown, status?: number): ApiError {
+    // Handle backend error format: { error: { code, message } }
+    if (error && typeof error === 'object') {
+      const errorObj = error as Record<string, unknown>;
+
+      // Check for nested error object (backend format)
+      if ('error' in errorObj && typeof errorObj.error === 'object') {
+        const backendError = errorObj.error as Record<string, unknown>;
+        const code = (backendError.code as string) || 'API_ERROR';
+        const message = (backendError.message as string) || 'An error occurred';
+
+        // Map OTP-specific error codes to clean UI-friendly codes
+        const mappedCode = OTP_ERROR_CODE_MAP[code] || code;
+
+        return {
+          message,
+          code: mappedCode,
+          status: status || (errorObj.status as number),
+        };
+      }
+
+      // Check for direct error properties
+      if ('code' in errorObj && 'message' in errorObj) {
+        const code = (errorObj.code as string) || 'API_ERROR';
+        const message = (errorObj.message as string) || 'An error occurred';
+
+        // Map OTP-specific error codes to clean UI-friendly codes
+        const mappedCode = OTP_ERROR_CODE_MAP[code] || code;
+
+        return {
+          message,
+          code: mappedCode,
+          status: status || (errorObj.status as number),
+        };
+      }
+    }
+
     // Handle network errors (fetch failures)
     if (error instanceof TypeError && error.message.includes('fetch')) {
       return {
         message: 'Network error. Please check your connection and try again.',
         code: 'NETWORK_ERROR',
-      };
-    }
-
-    // Handle API errors (already structured)
-    if (error && typeof error === 'object' && 'message' in error) {
-      return {
-        message: (error as { message: string }).message,
-        code: (error as { code?: string }).code || 'API_ERROR',
+        status,
       };
     }
 
@@ -48,11 +136,13 @@ class ApiClient {
         return {
           message: 'Network error. Please check your connection and try again.',
           code: 'NETWORK_ERROR',
+          status,
         };
       }
       return {
         message: 'An error occurred. Please try again.',
         code: 'UNKNOWN_ERROR',
+        status,
       };
     }
 
@@ -60,12 +150,14 @@ class ApiClient {
     return {
       message: 'An error occurred. Please try again.',
       code: 'UNKNOWN_ERROR',
+      status,
     };
   }
 
   private async request<T>(
     endpoint: string,
-    config: RequestConfig = {}
+    config: RequestConfig = {},
+    retryOn401 = true
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     const token = this.getAuthToken();
@@ -75,6 +167,7 @@ class ApiClient {
       ...(config.headers as Record<string, string>),
     };
 
+    // Automatically attach Authorization Bearer token if available
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -85,36 +178,43 @@ class ApiClient {
         headers,
       });
 
-      if (!response.ok) {
+      // Handle 401 Unauthorized - attempt token refresh
+      if (response.status === 401 && retryOn401) {
+        // Skip refresh for auth endpoints (to avoid infinite loops)
+        const isAuthEndpoint = endpoint.startsWith('/auth/');
+        if (!isAuthEndpoint) {
+          const refreshSuccess = await this.refreshAccessToken();
+          if (refreshSuccess) {
+            // Retry the original request with new token
+            return this.request<T>(endpoint, config, false);
+          }
+        }
+
+        // If refresh failed or is auth endpoint, clear session and throw error
+        await this.clearSession();
         const errorData = await response.json().catch(() => ({}));
-        const error = errorData.error || errorData;
-        throw {
-          status: response.status,
-          message: error.message || `Request failed with status ${response.status}`,
-          code: error.code,
-        };
+        const normalizedError = this.normalizeError(errorData, 401);
+        throw normalizedError;
       }
 
-      return await response.json();
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const normalizedError = this.normalizeError(errorData, response.status);
+        throw normalizedError;
+      }
+
+      const responseData = await response.json();
+      // Backend sends data directly (not wrapped in data field)
+      return responseData;
     } catch (error) {
-      // Preserve structured errors from API
-      if (error && typeof error === 'object' && 'status' in error && 'message' in error) {
+      // If it's already a normalized ApiError, re-throw it
+      if (error && typeof error === 'object' && 'code' in error && 'message' in error) {
         throw error;
       }
 
-      // Temporary debug logging (NO PHI - only endpoint, no data)
-      console.log('API Error:', {
-        type: error instanceof Error ? error.constructor.name : typeof error,
-        message: error instanceof Error ? error.message : 'Unknown',
-        endpoint: endpoint, // Safe - just the endpoint path
-      });
-
-      // Handle network/fetch errors
-      const sanitized = this.sanitizeError(error);
-      throw {
-        ...sanitized,
-        status: (error as { status?: number })?.status,
-      };
+      // Normalize and throw
+      const normalizedError = this.normalizeError(error);
+      throw normalizedError;
     }
   }
 
@@ -144,5 +244,3 @@ class ApiClient {
 }
 
 export const apiClient = new ApiClient(baseURL);
-export type { ApiError };
-

@@ -1,3 +1,4 @@
+import { AccountInfoScreen } from '@features/auth/screens/AccountInfoScreen';
 import { AppointmentsNavigator } from '@features/appointments/AppointmentsNavigator';
 import { MedicationsNavigator } from '@features/medications/MedicationsNavigator';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -18,6 +19,11 @@ export const AppNavigator: React.FC = () => {
       <Stack.Screen
         name="Appointments"
         component={AppointmentsNavigator}
+        options={{ presentation: 'card' }}
+      />
+      <Stack.Screen
+        name="AccountInfo"
+        component={AccountInfoScreen}
         options={{ presentation: 'card' }}
       />
     </Stack.Navigator>

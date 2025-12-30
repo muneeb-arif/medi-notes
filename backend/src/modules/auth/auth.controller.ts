@@ -1,15 +1,16 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
+import type { AuthRequest } from '../../middleware/auth';
 import { HttpError } from '../../utils/httpError';
-import { sendSuccess, sendError } from '../../utils/response';
-import { authService } from './auth.service';
+import { sendError, sendSuccess } from '../../utils/response';
 import {
-  loginSchema,
   logoutSchema,
   refreshTokenSchema,
-  registerSchema,
+  requestOtpSchema,
+  updateAccountSchema,
+  verifyOtpSchema,
 } from './auth.schemas';
-import type { AuthRequest } from '../../middleware/auth';
+import { authService } from './auth.service';
 
 const validateRequest = <T>(schema: z.ZodSchema<T>, data: unknown): T => {
   const result = schema.safeParse(data);
@@ -20,37 +21,37 @@ const validateRequest = <T>(schema: z.ZodSchema<T>, data: unknown): T => {
 };
 
 export const authController = {
-  register: async (req: Request, res: Response) => {
+  requestOtp: async (req: Request, res: Response) => {
     const requestId = (req as any).requestId;
     try {
-      const data = validateRequest(registerSchema, req.body);
-      const result = await authService.register(data);
-      sendSuccess(res, result, 201);
-    } catch (error: any) {
-      if (error instanceof HttpError) {
-        return sendError(res, error.code, error.message, error.statusCode, requestId);
-      }
-      if (error.message === 'EMAIL_ALREADY_EXISTS') {
-        return sendError(res, 'EMAIL_ALREADY_EXISTS', 'Email already registered', 409, requestId);
-      }
-      sendError(res, 'REGISTRATION_FAILED', 'Registration failed', 500, requestId);
-    }
-  },
-
-  login: async (req: Request, res: Response) => {
-    const requestId = (req as any).requestId;
-    try {
-      const data = validateRequest(loginSchema, req.body);
-      const result = await authService.login(data);
+      const data = validateRequest(requestOtpSchema, req.body);
+      const result = await authService.requestOtp(data, req);
       sendSuccess(res, result);
     } catch (error: any) {
       if (error instanceof HttpError) {
         return sendError(res, error.code, error.message, error.statusCode, requestId);
       }
-      if (error.message === 'INVALID_CREDENTIALS') {
-        return sendError(res, 'INVALID_CREDENTIALS', 'Invalid email or password', 401, requestId);
+      // Log the actual error for debugging (no PHI)
+      console.error('[OTP Request Error]', {
+        message: error?.message,
+        code: error?.code,
+        requestId,
+      });
+      sendError(res, 'OTP_REQUEST_FAILED', error?.message || 'Failed to request OTP', 500, requestId);
+    }
+  },
+
+  verifyOtp: async (req: Request, res: Response) => {
+    const requestId = (req as any).requestId;
+    try {
+      const data = validateRequest(verifyOtpSchema, req.body);
+      const result = await authService.verifyOtp(data, req);
+      sendSuccess(res, result);
+    } catch (error: any) {
+      if (error instanceof HttpError) {
+        return sendError(res, error.code, error.message, error.statusCode, requestId);
       }
-      sendError(res, 'LOGIN_FAILED', 'Login failed', 500, requestId);
+      sendError(res, 'OTP_VERIFICATION_FAILED', 'Failed to verify OTP', 500, requestId);
     }
   },
 
@@ -63,9 +64,6 @@ export const authController = {
     } catch (error: any) {
       if (error instanceof HttpError) {
         return sendError(res, error.code, error.message, error.statusCode, requestId);
-      }
-      if (error.message === 'INVALID_TOKEN') {
-        return sendError(res, 'INVALID_TOKEN', 'Invalid or expired refresh token', 401, requestId);
       }
       sendError(res, 'REFRESH_FAILED', 'Token refresh failed', 500, requestId);
     }
@@ -93,7 +91,7 @@ export const authController = {
         return sendError(res, 'UNAUTHORIZED', 'Not authenticated', 401, requestId);
       }
 
-      const account = authService.getAccountById(accountId);
+      const account = await authService.getAccountById(accountId);
       if (!account) {
         return sendError(res, 'ACCOUNT_NOT_FOUND', 'Account not found', 404, requestId);
       }
@@ -106,5 +104,23 @@ export const authController = {
       sendError(res, 'FETCH_FAILED', 'Failed to fetch account', 500, requestId);
     }
   },
-};
 
+  updateMe: async (req: AuthRequest, res: Response) => {
+    const requestId = (req as any).requestId;
+    try {
+      const accountId = req.accountId;
+      if (!accountId) {
+        return sendError(res, 'UNAUTHORIZED', 'Not authenticated', 401, requestId);
+      }
+
+      const data = validateRequest(updateAccountSchema, req.body);
+      const account = await authService.updateAccount(accountId, data);
+      sendSuccess(res, account);
+    } catch (error: any) {
+      if (error instanceof HttpError) {
+        return sendError(res, error.code, error.message, error.statusCode, requestId);
+      }
+      sendError(res, 'UPDATE_FAILED', 'Failed to update account', 500, requestId);
+    }
+  },
+};

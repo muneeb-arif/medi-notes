@@ -1,6 +1,6 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
 import { spacing, typography } from '@theme';
+import React from 'react';
+import { StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { PrimaryButton } from './PrimaryButton';
 
 interface EmptyStateProps {
@@ -9,6 +9,7 @@ interface EmptyStateProps {
   icon?: string;
   actionLabel?: string;
   onAction?: () => void;
+  buttonStyle?: ViewStyle;
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
@@ -17,6 +18,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   icon,
   actionLabel,
   onAction,
+  buttonStyle,
 }) => {
   return (
     <View style={styles.container}>
@@ -24,7 +26,11 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <Text style={styles.title}>{title}</Text>
       {description && <Text style={styles.description}>{description}</Text>}
       {actionLabel && onAction && (
-        <PrimaryButton label={actionLabel} onPress={onAction} style={styles.button} />
+        <PrimaryButton
+          label={actionLabel}
+          onPress={onAction}
+          style={StyleSheet.flatten([styles.button, buttonStyle])}
+        />
       )}
     </View>
   );
@@ -45,15 +51,17 @@ const styles = StyleSheet.create({
     ...typography.h2,
     marginBottom: spacing.sm,
     textAlign: 'center',
+    width: '100%',
   },
   description: {
     ...typography.body,
     color: '#8E8E93',
     marginBottom: spacing.lg,
     textAlign: 'center',
+    width: '100%',
   },
   button: {
-    minWidth: 200,
+    width: '100%',
   },
 });
 

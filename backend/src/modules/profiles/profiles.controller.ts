@@ -19,11 +19,11 @@ const validateRequest = <T>(schema: z.ZodSchema<T>, data: unknown): T => {
 };
 
 export const profilesController = {
-  list: (req: AuthRequest, res: Response) => {
+  list: async (req: AuthRequest, res: Response) => {
     const requestId = (req as any).requestId;
     try {
       const accountId = req.accountId!;
-      const profiles = profilesService.list(accountId);
+      const profiles = await profilesService.list(accountId);
       sendSuccess(res, { items: profiles });
     } catch (error: any) {
       if (error instanceof HttpError) {
@@ -33,12 +33,12 @@ export const profilesController = {
     }
   },
 
-  getById: (req: AuthRequest, res: Response) => {
+  getById: async (req: AuthRequest, res: Response) => {
     const requestId = (req as any).requestId;
     try {
       const accountId = req.accountId!;
       const profileId = req.params.profileId;
-      const profile = profilesService.getById(accountId, profileId);
+      const profile = await profilesService.getById(accountId, profileId);
 
       if (!profile) {
         return sendError(res, 'PROFILE_NOT_FOUND', 'Profile not found', 404, requestId);
@@ -53,12 +53,12 @@ export const profilesController = {
     }
   },
 
-  create: (req: AuthRequest, res: Response) => {
+  create: async (req: AuthRequest, res: Response) => {
     const requestId = (req as any).requestId;
     try {
       const accountId = req.accountId!;
       const data = validateRequest(createProfileSchema, req.body);
-      const profile = profilesService.create(accountId, data);
+      const profile = await profilesService.create(accountId, data);
       sendSuccess(res, profile, 201);
     } catch (error: any) {
       if (error instanceof HttpError) {
@@ -68,7 +68,7 @@ export const profilesController = {
     }
   },
 
-  update: (req: AuthRequest, res: Response) => {
+  update: async (req: AuthRequest, res: Response) => {
     const requestId = (req as any).requestId;
     try {
       const accountId = req.accountId!;
@@ -76,7 +76,7 @@ export const profilesController = {
       const data = validateRequest(updateProfileSchema, req.body);
 
       try {
-        const profile = profilesService.update(accountId, profileId, data);
+        const profile = await profilesService.update(accountId, profileId, data);
         sendSuccess(res, profile);
       } catch (error: any) {
         if (error.message === 'PROFILE_NOT_FOUND') {
@@ -92,14 +92,14 @@ export const profilesController = {
     }
   },
 
-  delete: (req: AuthRequest, res: Response) => {
+  delete: async (req: AuthRequest, res: Response) => {
     const requestId = (req as any).requestId;
     try {
       const accountId = req.accountId!;
       const profileId = req.params.profileId;
 
       try {
-        profilesService.delete(accountId, profileId);
+        await profilesService.delete(accountId, profileId);
         sendSuccess(res, { message: 'Profile deleted successfully' });
       } catch (error: any) {
         if (error.message === 'PROFILE_NOT_FOUND') {
@@ -115,7 +115,7 @@ export const profilesController = {
     }
   },
 
-  updateSettings: (req: AuthRequest, res: Response) => {
+  updateSettings: async (req: AuthRequest, res: Response) => {
     const requestId = (req as any).requestId;
     try {
       const accountId = req.accountId!;
@@ -123,7 +123,7 @@ export const profilesController = {
       const data = validateRequest(profileSettingsSchema, req.body);
 
       try {
-        const profile = profilesService.updateSettings(accountId, profileId, data);
+        const profile = await profilesService.updateSettings(accountId, profileId, data);
         sendSuccess(res, profile);
       } catch (error: any) {
         if (error.message === 'PROFILE_NOT_FOUND') {

@@ -2,7 +2,6 @@ import { PrimaryButton } from '@components/PrimaryButton';
 import { Screen } from '@components/Screen';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigation } from '@react-navigation/native';
-import { useSessionStore } from '@store/session.store';
 import { spacing, typography } from '@theme';
 import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -15,48 +14,55 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { z } from 'zod';
 import { authApi } from '../api/auth.api';
 
-const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+const phoneSchema = z.object({
+  phone: z
+    .string()
+    .min(1, 'Phone number is required')
+    .regex(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid phone number'),
 });
 
-type LoginFormData = z.infer<typeof loginSchema>;
+type PhoneFormData = z.infer<typeof phoneSchema>;
 
-export const LoginScreen: React.FC = () => {
+export const PhoneInputScreen: React.FC = () => {
   const navigation = useNavigation();
-  const { setTokens, setAccount } = useSessionStore();
   const [isLoading, setIsLoading] = useState(false);
 
   const {
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
+  } = useForm<PhoneFormData>({
+    resolver: zodResolver(phoneSchema),
     defaultValues: {
-      email: 'user@example.com',
-      password: 'StrongP@ssw0rd',
+      phone: '+923001234567',
     },
   });
 
-  const onSubmit = async (data: LoginFormData) => {
+  const onSubmit = async (data: PhoneFormData) => {
     setIsLoading(true);
     try {
-      const response = await authApi.login(data);
-      await setTokens(response.tokens);
-      setAccount(response.account);
+      await authApi.requestOtp({ phone: data.phone });
+      navigation.navigate('OtpVerification' as never, { phone: data.phone } as never);
     } catch (error) {
-      const apiError = error as { message?: string; code?: string };
-      Alert.alert(
-        'Login Failed',
-        apiError.message || 'Unable to log in. Please check your credentials and try again.'
-      );
+      const apiError = error as { message?: string; code?: string; status?: number };
+      let errorMessage = 'Unable to send OTP. Please try again.';
+      
+      if (apiError.code === 'NETWORK_ERROR') {
+        errorMessage = 'Unable to connect. Please check your internet connection and try again.';
+      } else if (apiError.message) {
+        errorMessage = apiError.message;
+      } else if (apiError.status === 500) {
+        errorMessage = 'Something went wrong. Please try again in a moment.';
+      } else if (apiError.status === 404) {
+        errorMessage = 'Unable to send code. Please try again.';
+      }
+      
+      Alert.alert('Unable to Send Code', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -72,85 +78,60 @@ export const LoginScreen: React.FC = () => {
         >
           <ScrollView
             contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
-            {/* Branding */}
             <View style={styles.brandingContainer}>
               <Image
                 source={require('../../../../assets/images/logo.png')}
                 style={styles.logo}
                 resizeMode="contain"
               />
-              <Text style={styles.brandSubtitle}>Your health records, organized</Text>
+              <Text style={styles.brandTitle}>Medi Notes</Text>
+              <Text style={styles.brandSubtitle}>Secure Medical Records</Text>
             </View>
 
-            {/* Form Card */}
             <View style={styles.formCard}>
-              <Text style={styles.cardTitle}>Login</Text>
+              <Text style={styles.cardTitle}>Enter Phone Number</Text>
+              <Text style={styles.cardSubtitle}>
+                We'll send you a verification code via SMS
+              </Text>
 
               <View style={styles.field}>
-                <Text style={styles.label}>Email</Text>
+                <Text style={styles.label}>Phone Number</Text>
                 <Controller
                   control={control}
-                  name="email"
+                  name="phone"
                   render={({ field: { onChange, onBlur, value } }) => (
                     <>
                       <TextInput
-                        style={[styles.input, errors.email && styles.inputError]}
-                        placeholder="user@example.com"
+                        style={[styles.input, errors.phone && styles.inputError]}
+                        placeholder="+923001234567"
                         value={value}
                         onChangeText={onChange}
                         onBlur={onBlur}
-                        keyboardType="email-address"
+                        keyboardType="phone-pad"
                         autoCapitalize="none"
-                        autoComplete="email"
+                        autoComplete="tel"
                         placeholderTextColor="#8E8E93"
                       />
-                      {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
-                    </>
-                  )}
-                />
-              </View>
-
-              <View style={styles.field}>
-                <Text style={styles.label}>Password</Text>
-                <Controller
-                  control={control}
-                  name="password"
-                  render={({ field: { onChange, onBlur, value } }) => (
-                    <>
-                      <TextInput
-                        style={[styles.input, errors.password && styles.inputError]}
-                        placeholder="Enter password"
-                        value={value}
-                        onChangeText={onChange}
-                        onBlur={onBlur}
-                        secureTextEntry
-                        autoCapitalize="none"
-                        autoComplete="password"
-                        placeholderTextColor="#8E8E93"
-                      />
-                      {errors.password && <Text style={styles.errorText}>{errors.password.message}</Text>}
-                      <Text style={styles.helperText}>Minimum 6 characters</Text>
+                      {errors.phone && (
+                        <Text style={styles.errorText}>{errors.phone.message}</Text>
+                      )}
+                      <Text style={styles.helperText}>
+                        Include country code (e.g., +92 for Pakistan)
+                      </Text>
                     </>
                   )}
                 />
               </View>
 
               <PrimaryButton
-                label={isLoading ? 'Logging in...' : 'Login.'}
+                label={isLoading ? 'Sending...' : 'Continue with phone'}
                 onPress={handleSubmit(onSubmit)}
                 loading={isLoading}
                 disabled={isLoading}
                 style={styles.button}
               />
-
-              <TouchableOpacity
-                style={styles.linkButton}
-                onPress={() => navigation.navigate('Register' as never)}
-              >
-                <Text style={styles.linkText}>Don't have an account? Register</Text>
-              </TouchableOpacity>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -198,11 +179,15 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     marginTop: spacing.md,
     marginBottom: spacing.xs,
+    width: '100%',
+    textAlign: "center"
   },
   brandSubtitle: {
     fontSize: 14,
     color: '#FFFFFF',
     opacity: 0.9,
+    width: "100%",
+    textAlign: "center"
   },
   formCard: {
     backgroundColor: '#FFFFFF',
@@ -217,8 +202,14 @@ const styles = StyleSheet.create({
   cardTitle: {
     ...typography.h2,
     fontSize: 22,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xs,
     textAlign: 'center',
+  },
+  cardSubtitle: {
+    ...typography.caption,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+    color: '#8E8E93',
   },
   field: {
     marginBottom: spacing.md,
@@ -236,7 +227,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     fontSize: 16,
     backgroundColor: '#FFFFFF',
-    height: 48,
+    height: 50,
     color: '#000000',
   },
   inputError: {
@@ -256,17 +247,5 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     width: '100%',
   },
-  linkButton: {
-    marginTop: spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.sm,
-    width: '100%',
-  },
-  linkText: {
-    ...typography.body,
-    color: '#007AFF',
-    fontSize: 15,
-    textAlign: 'center',
-  },
 });
+

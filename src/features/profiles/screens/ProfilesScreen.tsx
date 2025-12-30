@@ -1,14 +1,14 @@
-import React, { useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { Screen } from '@components/Screen';
-import { SectionCard } from '@components/SectionCard';
 import { EmptyState } from '@components/EmptyState';
 import { PrimaryButton } from '@components/PrimaryButton';
-import { spacing, typography } from '@theme';
-import { useProfilesList } from '../hooks/useProfilesList';
-import { useDeleteProfile } from '../hooks/useDeleteProfile';
+import { Screen } from '@components/Screen';
+import { SectionCard } from '@components/SectionCard';
+import { useNavigation } from '@react-navigation/native';
 import { useActiveProfileStore } from '@store/activeProfile.store';
+import { spacing, typography } from '@theme';
+import React, { useEffect } from 'react';
+import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useDeleteProfile } from '../hooks/useDeleteProfile';
+import { useProfilesList } from '../hooks/useProfilesList';
 import type { PersonProfile } from '../types';
 
 export const ProfilesScreen: React.FC = () => {
@@ -26,7 +26,7 @@ export const ProfilesScreen: React.FC = () => {
   const handleDelete = (profile: PersonProfile) => {
     Alert.alert(
       'Delete Profile',
-      `Are you sure you want to delete ${profile.fullName}? This action cannot be undone.`,
+      `Are you sure you want to delete ${profile.name}? This action cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -40,7 +40,7 @@ export const ProfilesScreen: React.FC = () => {
 
   const handleSelectProfile = (profileId: string) => {
     setActiveProfileId(profileId);
-    navigation.navigate('ProfileDetail' as never, { profileId } as never);
+    (navigation as any).navigate('ProfileDetail', { profileId });
   };
 
   if (isLoading) {
@@ -65,18 +65,22 @@ export const ProfilesScreen: React.FC = () => {
 
   const renderProfileItem = ({ item }: { item: PersonProfile }) => (
     <SectionCard
-      style={[
+      style={StyleSheet.flatten([
         styles.profileItem,
         activeProfileId === item.id && styles.activeProfileItem,
-      ]}
+      ])}
     >
       <View style={styles.profileContent}>
         <TouchableOpacity
           style={styles.profileInfo}
           onPress={() => handleSelectProfile(item.id)}
         >
-          <Text style={styles.profileName}>{item.fullName}</Text>
-          <Text style={styles.profileRelation}>{item.relationToAccount}</Text>
+          <Text style={styles.profileName}>{item.name}</Text>
+          {item.notes && (
+            <Text style={styles.profileNotes} numberOfLines={1}>
+              {item.notes}
+            </Text>
+          )}
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.deleteButton}
@@ -97,11 +101,12 @@ export const ProfilesScreen: React.FC = () => {
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <EmptyState
-            icon="👤"
+            icon="📋"
             title="No profiles yet"
-            description="Profiles help you keep health records separate for each family member."
+            description="Create medical context profiles like Cardiology, Fertility, or Psychology to organize your health records."
             actionLabel="Add Profile"
-            onAction={() => navigation.navigate('ProfileEditor' as never, { mode: 'create' } as never)}
+            buttonStyle={styles.emptyStateButton}
+            onAction={() => (navigation as any).navigate('ProfileEditor', { mode: 'create' })}
           />
         }
       />
@@ -109,7 +114,7 @@ export const ProfilesScreen: React.FC = () => {
         <View style={styles.buttonContainer}>
           <PrimaryButton
             label="+ Add Profile"
-            onPress={() => navigation.navigate('ProfileEditor' as never, { mode: 'create' } as never)}
+            onPress={() => (navigation as any).navigate('ProfileEditor', { mode: 'create' })}
           />
         </View>
       )}
@@ -147,8 +152,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     marginBottom: spacing.xs,
   },
-  profileRelation: {
+  profileNotes: {
     ...typography.caption,
+    color: '#8E8E93',
   },
   deleteButton: {
     paddingHorizontal: spacing.md,
@@ -164,5 +170,8 @@ const styles = StyleSheet.create({
   errorText: {
     ...typography.body,
     color: '#FF3B30',
+  },
+  emptyStateButton: {
+    width: '100%',
   },
 });
