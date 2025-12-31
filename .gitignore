@@ -44,4 +44,83 @@ app-example
 
 .env
 backend/.env
-.env.local
+.env.localWe already implemented the Appointments feature, but it was using in-memory seed data. Now backend is connected to PostgreSQL and returns persisted appointments. Update the mobile app to correctly fetch/persist appointments and update the Home dashboard to show recent appointments.
+
+Scope (ONLY):
+- Appointments feature (list + create + update + delete)
+- HomeScreen appointments card content
+Do NOT modify other features.
+
+Backend expectation:
+Appointments are account-level (not profile-level).
+However, when listing appointments, we should still pass activeProfileId if API supports filtering later, but for now it should work even without profile filtering.
+
+Tasks:
+
+1) Update appointments API client (frontend)
+- File: src/features/appointments/api/appointments.api.ts
+- Ensure it calls the real endpoints and matches actual backend response fields.
+- No mock/seed assumptions.
+- Support:
+  - list(params): GET /appointments?limit=&cursor=&from=&to=&status= (use params only if backend supports)
+  - getById(id)
+  - create(payload)
+  - update(id, payload)
+  - delete(id)
+- Ensure date fields are handled consistently (ISO string).
+
+2) Update React Query hooks (frontend)
+- File: src/features/appointments/hooks/useAppointmentsList.ts
+- Add support for optional params:
+  - limit (default 20)
+  - upcomingOnly boolean OR filter mode ("upcoming" | "past" | "all")
+- Cache key must include params.
+- On create/update/delete, invalidate list queries.
+
+3) Fix AppointmentsScreen to show persisted data
+- File: src/features/appointments/screens/AppointmentsScreen.tsx
+- Remove any logic that assumes seed data.
+- Show:
+  - Tabs: Upcoming / Past / All
+  - Upcoming sorted soonest first; Past sorted newest first.
+- Use loading, empty, error states consistent with other screens.
+- Ensure delete works and refreshes the list.
+
+4) Fix AppointmentEditorScreen create/update to persist to API
+- File: src/features/appointments/screens/AppointmentEditorScreen.tsx
+- Ensure create uses useCreateAppointment mutation and returns saved record.
+- Ensure edit mode loads detail via useAppointmentDetail then updates via mutation.
+- After save:
+  - navigate back to list
+  - list should show updated data without manual refresh
+- Use safe validation:
+  - title/doctor required
+  - startAt ISO required
+  - location/notes optional
+- Do NOT log PHI.
+
+5) Update HomeScreen appointments section to show recent appointments
+- File: src/features/home/screens/HomeScreen.tsx
+- Replace the current "Manage Appointments" static row.
+- Show the next 2 upcoming appointments (or latest 2 if none upcoming).
+- Display:
+  - Title or doctor
+  - Date + time formatted
+- Include "View all" which navigates to the Appointments stack route (same as current).
+- Use existing design components (SectionCard/ListRow/etc.). No new UI libraries.
+
+6) Backend check (minimal only if needed)
+If backend routes still seed data or don’t query DB, update backend appointments module so:
+- It reads/writes to PostgreSQL via existing ORM setup (TypeORM).
+- Ensure endpoints return consistent shape:
+  { id, title, doctorName, startAt, endAt?, location?, notes?, createdAt, updatedAt }
+Keep backend changes minimal and limited to appointments module.
+
+Constraints:
+- Keep each edited/created file under 200 lines.
+- Don’t touch navigation structure except if a route name mismatch breaks Home navigation.
+- No unrelated refactors.
+- Ensure Home and Appointments screens work after restarting backend and app.
+
+After implementation:
+- Create appointment on device -> it should persist -> relaunch app -> appointment still exists -> Home shows it.
