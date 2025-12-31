@@ -4,6 +4,11 @@
 -- DB: PostgreSQL
 -- =====================================================
 
+CREATE DATABASE medinote;
+
+-- \c medinote;
+
+
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- =====================================================

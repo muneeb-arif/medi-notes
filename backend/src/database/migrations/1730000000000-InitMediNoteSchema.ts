@@ -2,6 +2,10 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class InitMediNoteSchema1730000000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
+    
+    // CREATE DATABASE medinote;
+    await queryRunner.query(`CREATE DATABASE medinote`);
+    
     // Create UUID extension
     await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
 
