@@ -15,12 +15,17 @@ const validateRequest = <T>(schema: z.ZodSchema<T>, data: unknown): T => {
 };
 
 export const appointmentsController = {
-  create: (req: AuthRequest, res: Response) => {
+  create: async (req: AuthRequest, res: Response) => {
     const requestId = (req as any).requestId;
     try {
-      const profileId = req.params.profileId;
+      const accountId = req.accountId;
+      if (!accountId) {
+        return sendError(res, 'UNAUTHORIZED', 'Not authenticated', 401, requestId);
+      }
+
+      const profileId = (req.query.profileId as string) || undefined;
       const data = validateRequest(createAppointmentSchema, req.body);
-      const appointment = appointmentsService.create(profileId, data);
+      const appointment = await appointmentsService.create(accountId, profileId, data);
       sendSuccess(res, appointment, 201);
     } catch (error: any) {
       if (error instanceof HttpError) {
@@ -30,11 +35,16 @@ export const appointmentsController = {
     }
   },
 
-  list: (req: AuthRequest, res: Response) => {
+  list: async (req: AuthRequest, res: Response) => {
     const requestId = (req as any).requestId;
     try {
-      const profileId = req.params.profileId;
+      const accountId = req.accountId;
+      if (!accountId) {
+        return sendError(res, 'UNAUTHORIZED', 'Not authenticated', 401, requestId);
+      }
+
       const params: any = {};
+      const profileId = (req.query.profileId as string) || undefined;
 
       if (req.query.status) {
         params.status = req.query.status;
@@ -52,22 +62,32 @@ export const appointmentsController = {
         params.limit = parseInt(req.query.limit as string, 10);
       }
 
-      const result = appointmentsService.list(profileId, params);
+      const result = await appointmentsService.list(accountId, profileId, params);
       sendSuccess(res, result);
     } catch (error: any) {
       if (error instanceof HttpError) {
         return sendError(res, error.code, error.message, error.statusCode, requestId);
       }
+      // Log the actual error for debugging (without PHI)
+      console.error('[Appointments List Error]', {
+        requestId,
+        error: error?.message || String(error),
+        stack: error?.stack,
+      });
       sendError(res, 'FETCH_FAILED', 'Failed to fetch appointments', 500, requestId);
     }
   },
 
-  getById: (req: AuthRequest, res: Response) => {
+  getById: async (req: AuthRequest, res: Response) => {
     const requestId = (req as any).requestId;
     try {
-      const profileId = req.params.profileId;
+      const accountId = req.accountId;
+      if (!accountId) {
+        return sendError(res, 'UNAUTHORIZED', 'Not authenticated', 401, requestId);
+      }
+
       const appointmentId = req.params.appointmentId;
-      const appointment = appointmentsService.getById(profileId, appointmentId);
+      const appointment = await appointmentsService.getById(accountId, appointmentId);
 
       if (!appointment) {
         return sendError(res, 'APPOINTMENT_NOT_FOUND', 'Appointment not found', 404, requestId);
@@ -82,13 +102,17 @@ export const appointmentsController = {
     }
   },
 
-  update: (req: AuthRequest, res: Response) => {
+  update: async (req: AuthRequest, res: Response) => {
     const requestId = (req as any).requestId;
     try {
-      const profileId = req.params.profileId;
+      const accountId = req.accountId;
+      if (!accountId) {
+        return sendError(res, 'UNAUTHORIZED', 'Not authenticated', 401, requestId);
+      }
+
       const appointmentId = req.params.appointmentId;
       const data = validateRequest(updateAppointmentSchema, req.body);
-      const appointment = appointmentsService.update(profileId, appointmentId, data);
+      const appointment = await appointmentsService.update(accountId, appointmentId, data);
 
       if (!appointment) {
         return sendError(res, 'APPOINTMENT_NOT_FOUND', 'Appointment not found', 404, requestId);
@@ -103,12 +127,16 @@ export const appointmentsController = {
     }
   },
 
-  delete: (req: AuthRequest, res: Response) => {
+  delete: async (req: AuthRequest, res: Response) => {
     const requestId = (req as any).requestId;
     try {
-      const profileId = req.params.profileId;
+      const accountId = req.accountId;
+      if (!accountId) {
+        return sendError(res, 'UNAUTHORIZED', 'Not authenticated', 401, requestId);
+      }
+
       const appointmentId = req.params.appointmentId;
-      const deleted = appointmentsService.delete(profileId, appointmentId);
+      const deleted = await appointmentsService.delete(accountId, appointmentId);
 
       if (!deleted) {
         return sendError(res, 'APPOINTMENT_NOT_FOUND', 'Appointment not found', 404, requestId);

@@ -1,19 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { appointmentsApi } from '../api/appointments.api';
 
-export const useAppointmentDetail = (
-  profileId: string | null,
-  appointmentId: string | null
-) => {
+export const useAppointmentDetail = (appointmentId: string | null) => {
   return useQuery({
-    queryKey: ['appointments', 'detail', profileId, appointmentId],
+    queryKey: ['appointments', 'detail', appointmentId],
     queryFn: () => {
-      if (!profileId || !appointmentId) {
-        throw new Error('Profile ID and Appointment ID are required');
+      if (!appointmentId) {
+        throw new Error('Appointment ID is required');
       }
-      return appointmentsApi.getById(profileId, appointmentId);
+      return appointmentsApi.getById(appointmentId);
     },
-    enabled: !!profileId && !!appointmentId,
+    enabled: !!appointmentId,
   });
 };
 

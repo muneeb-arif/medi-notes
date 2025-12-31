@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { appointmentsApi } from '../api/appointments.api';
 import type { UpdateAppointmentInput } from '../types';
 
-export const useUpdateAppointment = (profileId: string) => {
+export const useUpdateAppointment = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -12,9 +12,10 @@ export const useUpdateAppointment = (profileId: string) => {
     }: {
       appointmentId: string;
       data: UpdateAppointmentInput;
-    }) => appointmentsApi.update(profileId, appointmentId, data),
+    }) => appointmentsApi.update(appointmentId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['appointments', 'list', profileId] });
+      queryClient.invalidateQueries({ queryKey: ['appointments', 'list'] });
+      queryClient.invalidateQueries({ queryKey: ['appointments', 'detail'] });
     },
   });
 };

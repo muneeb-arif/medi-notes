@@ -1,11 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import React from 'react';
+import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
   Platform,
   StyleSheet,
   Text,
@@ -13,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { z } from 'zod';
 import { Screen } from '@components/Screen';
 import { SectionCard } from '@components/SectionCard';
@@ -47,6 +47,36 @@ const FREQUENCY_OPTIONS: { value: MedicationFrequency; label: string }[] = [
   { value: 'custom', label: 'Custom' },
 ];
 
+const formatDate = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const formatDateDisplay = (dateString: string): string => {
+  if (!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  } catch {
+    return dateString;
+  }
+};
+
+const parseDate = (dateString: string): Date => {
+  if (!dateString) return new Date();
+  try {
+    return new Date(dateString);
+  } catch {
+    return new Date();
+  }
+};
+
 export const MedicationEditorScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
@@ -61,12 +91,16 @@ export const MedicationEditorScreen: React.FC = () => {
     mode === 'edit' ? medicationId || null : null
   );
 
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+
   const {
     control,
     handleSubmit,
     formState: { errors },
     watch,
     reset,
+    setValue,
   } = useForm<MedicationFormData>({
     resolver: zodResolver(medicationSchema),
     defaultValues: {
@@ -82,6 +116,9 @@ export const MedicationEditorScreen: React.FC = () => {
       notes: '',
     },
   });
+
+  const startDateValue = watch('startDate');
+  const endDateValue = watch('endDate');
 
   React.useEffect(() => {
     if (existingMedication && mode === 'edit') {
@@ -101,6 +138,28 @@ export const MedicationEditorScreen: React.FC = () => {
   }, [existingMedication, mode, reset]);
 
   const selectedFrequency = watch('frequency');
+
+  const handleStartDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowStartDatePicker(false);
+    }
+    if (event.type === 'set' && selectedDate) {
+      setValue('startDate', formatDate(selectedDate), { shouldValidate: true });
+    } else if (event.type === 'dismissed') {
+      // User dismissed, keep current value
+    }
+  };
+
+  const handleEndDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowEndDatePicker(false);
+    }
+    if (event.type === 'set' && selectedDate) {
+      setValue('endDate', formatDate(selectedDate), { shouldValidate: true });
+    } else if (event.type === 'dismissed') {
+      // User dismissed, keep current value
+    }
+  };
 
   const onSubmit = async (data: MedicationFormData) => {
     try {
@@ -143,11 +202,7 @@ export const MedicationEditorScreen: React.FC = () => {
 
   return (
     <Screen scrollable padding="none">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        <View style={styles.content}>
+      <View style={styles.content}>
           {/* Medication Details */}
           <SectionCard style={styles.section}>
             <Text style={styles.sectionTitle}>Medication Details</Text>
@@ -320,13 +375,37 @@ export const MedicationEditorScreen: React.FC = () => {
                 <Controller
                   control={control}
                   name="startDate"
-                  render={({ field: { onChange, value } }) => (
-                    <TextInput
-                      style={styles.input}
-                      value={value || ''}
-                      onChangeText={onChange}
-                      placeholder="YYYY-MM-DD"
-                    />
+                  render={({ field: { value } }) => (
+                    <>
+                      <TouchableOpacity
+                        style={[styles.input, styles.dateInput]}
+                        onPress={() => setShowStartDatePicker(true)}
+                        disabled={isLoading}
+                      >
+                        <Text style={[styles.dateText, !value && styles.placeholderText]}>
+                          {value ? formatDateDisplay(value) : 'Select start date'}
+                        </Text>
+                      </TouchableOpacity>
+                      {showStartDatePicker && (
+                        <>
+                          <DateTimePicker
+                            value={startDateValue ? parseDate(startDateValue) : new Date()}
+                            mode="date"
+                            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                            onChange={handleStartDateChange}
+                            maximumDate={endDateValue ? parseDate(endDateValue) : undefined}
+                          />
+                          {Platform.OS === 'ios' && (
+                            <TouchableOpacity
+                              style={styles.datePickerButton}
+                              onPress={() => setShowStartDatePicker(false)}
+                            >
+                              <Text style={styles.datePickerButtonText}>Done</Text>
+                            </TouchableOpacity>
+                          )}
+                        </>
+                      )}
+                    </>
                   )}
                 />
               </View>
@@ -336,13 +415,37 @@ export const MedicationEditorScreen: React.FC = () => {
                 <Controller
                   control={control}
                   name="endDate"
-                  render={({ field: { onChange, value } }) => (
-                    <TextInput
-                      style={styles.input}
-                      value={value || ''}
-                      onChangeText={onChange}
-                      placeholder="YYYY-MM-DD"
-                    />
+                  render={({ field: { value } }) => (
+                    <>
+                      <TouchableOpacity
+                        style={[styles.input, styles.dateInput]}
+                        onPress={() => setShowEndDatePicker(true)}
+                        disabled={isLoading}
+                      >
+                        <Text style={[styles.dateText, !value && styles.placeholderText]}>
+                          {value ? formatDateDisplay(value) : 'Select end date'}
+                        </Text>
+                      </TouchableOpacity>
+                      {showEndDatePicker && (
+                        <>
+                          <DateTimePicker
+                            value={endDateValue ? parseDate(endDateValue) : new Date()}
+                            mode="date"
+                            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                            onChange={handleEndDateChange}
+                            minimumDate={startDateValue ? parseDate(startDateValue) : undefined}
+                          />
+                          {Platform.OS === 'ios' && (
+                            <TouchableOpacity
+                              style={styles.datePickerButton}
+                              onPress={() => setShowEndDatePicker(false)}
+                            >
+                              <Text style={styles.datePickerButtonText}>Done</Text>
+                            </TouchableOpacity>
+                          )}
+                        </>
+                      )}
+                    </>
                   )}
                 />
               </View>
@@ -379,18 +482,14 @@ export const MedicationEditorScreen: React.FC = () => {
             style={styles.submitButton}
           />
         </View>
-      </KeyboardAvoidingView>
     </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  keyboardView: {
-    flex: 1,
-  },
   content: {
     padding: spacing.md,
-    paddingBottom: 120,
+    paddingBottom: 200,
   },
   centerContainer: {
     flex: 1,
@@ -486,5 +585,27 @@ const styles = StyleSheet.create({
   submitButton: {
     marginTop: spacing.lg,
     marginBottom: spacing.xl,
+  },
+  dateInput: {
+    justifyContent: 'center',
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#000000',
+  },
+  placeholderText: {
+    color: '#8E8E93',
+  },
+  datePickerButton: {
+    marginTop: spacing.sm,
+    padding: spacing.md,
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  datePickerButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

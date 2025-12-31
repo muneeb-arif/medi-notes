@@ -20,6 +20,7 @@ import { ProfileShare } from './entities/ProfileShare';
 import { AccessLog } from './entities/AccessLog';
 import { EmergencyNominee } from './entities/EmergencyNominee';
 import { EmergencySnapshot } from './entities/EmergencySnapshot';
+import { Appointment } from './entities/Appointment';
 
 class SnakeNamingStrategy extends DefaultNamingStrategy implements NamingStrategyInterface {
   tableName(className: string, customName: string): string {
@@ -64,6 +65,7 @@ export const AppDataSource = new DataSource({
     AccessLog,
     EmergencyNominee,
     EmergencySnapshot,
+    Appointment,
   ],
   migrations: ['src/database/migrations/**/*.ts'],
   migrationsTableName: 'migrations',

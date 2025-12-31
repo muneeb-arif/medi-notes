@@ -9,10 +9,11 @@ import type {
 
 export const appointmentsApi = {
   list: async (
-    profileId: string,
+    activeProfileId: string | null | undefined,
     params?: AppointmentsListParams
   ): Promise<AppointmentsListResponse> => {
     const queryParams = new URLSearchParams();
+    if (activeProfileId) queryParams.append('profileId', activeProfileId);
     if (params?.status) queryParams.append('status', params.status);
     if (params?.from) queryParams.append('from', params.from);
     if (params?.to) queryParams.append('to', params.to);
@@ -20,28 +21,34 @@ export const appointmentsApi = {
     if (params?.limit) queryParams.append('limit', params.limit.toString());
 
     const queryString = queryParams.toString();
-    const endpoint = `/profiles/${profileId}/appointments${queryString ? `?${queryString}` : ''}`;
+    const endpoint = `/appointments${queryString ? `?${queryString}` : ''}`;
     return apiClient.get<AppointmentsListResponse>(endpoint);
   },
 
-  getById: async (profileId: string, appointmentId: string): Promise<Appointment> => {
-    return apiClient.get<Appointment>(`/profiles/${profileId}/appointments/${appointmentId}`);
+  getById: async (appointmentId: string): Promise<Appointment> => {
+    return apiClient.get<Appointment>(`/appointments/${appointmentId}`);
   },
 
-  create: async (profileId: string, data: CreateAppointmentInput): Promise<Appointment> => {
-    return apiClient.post<Appointment>(`/profiles/${profileId}/appointments`, data);
+  create: async (
+    activeProfileId: string | null | undefined,
+    data: CreateAppointmentInput
+  ): Promise<Appointment> => {
+    const queryParams = new URLSearchParams();
+    if (activeProfileId) queryParams.append('profileId', activeProfileId);
+    const queryString = queryParams.toString();
+    const endpoint = `/appointments${queryString ? `?${queryString}` : ''}`;
+    return apiClient.post<Appointment>(endpoint, data);
   },
 
   update: async (
-    profileId: string,
     appointmentId: string,
     data: UpdateAppointmentInput
   ): Promise<Appointment> => {
-    return apiClient.put<Appointment>(`/profiles/${profileId}/appointments/${appointmentId}`, data);
+    return apiClient.put<Appointment>(`/appointments/${appointmentId}`, data);
   },
 
-  delete: async (profileId: string, appointmentId: string): Promise<void> => {
-    return apiClient.delete<void>(`/profiles/${profileId}/appointments/${appointmentId}`);
+  delete: async (appointmentId: string): Promise<void> => {
+    return apiClient.delete<void>(`/appointments/${appointmentId}`);
   },
 };
 

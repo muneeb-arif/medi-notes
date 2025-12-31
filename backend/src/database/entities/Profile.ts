@@ -13,6 +13,7 @@ import { ProfileReport } from './ProfileReport';
 import { VitalProfileTag } from './VitalProfileTag';
 import { ProfileShare } from './ProfileShare';
 import { AccessLog } from './AccessLog';
+import { Appointment } from './Appointment';
 
 @Entity('profiles')
 @Unique(['accountId', 'name'])
@@ -47,5 +48,8 @@ export class Profile {
 
   @OneToMany(() => AccessLog, (log) => log.profile)
   accessLogs: AccessLog[];
+
+  @OneToMany(() => Appointment, (appointment) => appointment.profile)
+  appointments: Appointment[];
 }
 
