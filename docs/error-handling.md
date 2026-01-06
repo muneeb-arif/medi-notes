@@ -1,4 +1,4 @@
-# Error Handling Guidelines – My Medi Logs
+# Error Handling Guidelines – Medi Note
 
 The purpose of this document is to define how errors are detected, handled, logged, and presented to users throughout the system. For a healthcare app, error handling must be conservative and user-friendly.
 

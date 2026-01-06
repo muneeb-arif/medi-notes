@@ -1,4 +1,4 @@
-# Development Priority Checklist – My Medi Logs
+# Development Priority Checklist – Medi Note
 
 > Plan type: **Option A – 3 Phases (MVP → v1.0 → v2.0)**  
 > Audience: You (solo dev) + any future dev/design help.  
@@ -366,7 +366,7 @@ This phase can be split further later; treat it as a roadmap bucket.
     - [ ] de-identification step
     - [ ] safe prompt templates.
 - Frontend:
-  - [ ] “Ask My Medi Logs” or “Health Assistant” tab:
+  - [ ] “Ask Medi Note” or “Health Assistant” tab:
     - [ ] Basic chat UI.
     - [ ] Restrict to explanation and summarization of existing data.
 - Safety:

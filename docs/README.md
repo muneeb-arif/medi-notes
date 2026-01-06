@@ -1,4 +1,4 @@
-# My Medi Logs – Documentation Index
+# Medi Note – Documentation Index
 
 These documents define the boundaries and rules of the system.
 

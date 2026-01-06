@@ -1,4 +1,4 @@
-# AI Family Tree & Risk Prediction Spec (v2+) – My Medi Logs
+# AI Family Tree & Risk Prediction Spec (v2+) – Medi Note
 
 This document defines how the app will create a family tree from multiple profiles and use AI/analytics to highlight potential hereditary risks.
 

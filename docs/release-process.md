@@ -1,4 +1,4 @@
-# Release Process – My Medi Logs
+# Release Process – Medi Note
 
 This document explains how we move from local development to production releases for the mobile app. It is geared toward a solo or small team using Expo and cloud backends.
 

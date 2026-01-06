@@ -1,4 +1,4 @@
-# AI Psychologist Spec (v2+) – My Medi Logs
+# AI Psychologist Spec (v2+) – Medi Note
 
 This document defines requirements for an AI-based psychologist / mental wellness assistant. This feature is high risk and must be implemented with strict safety guardrails.
 

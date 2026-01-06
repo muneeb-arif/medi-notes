@@ -1,4 +1,4 @@
-# Architecture – My Medi Logs
+# Architecture – Medi Note
 
 ## 1. Architectural Style
 - **Mobile App (Expo) with TypeScript**

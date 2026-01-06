@@ -1,4 +1,4 @@
-# My Medi Logs – Software Requirements Specification (Functional Core)
+# Medi Note – Software Requirements Specification (Functional Core)
 
 > This is the **engineering‑focused SRS**.  
 > It contains only functional and non‑functional requirements (no business/architecture/monetization details).
@@ -7,7 +7,7 @@
 
 ## 1. Purpose & Scope
 
-The My Medi Logs app enables users to:
+The Medi Note app enables users to:
 
 - Create and manage personal and family medical profiles.
 - Store and retrieve medical records (reports, vitals, medications).

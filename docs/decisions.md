@@ -1,4 +1,4 @@
-# Architectural Decisions – My Medi Logs
+# Architectural Decisions – Medi Note
 
 ## ADR-001: Mobile Stack
 - Expo + React Native + TypeScript

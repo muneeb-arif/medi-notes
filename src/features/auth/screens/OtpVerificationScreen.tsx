@@ -126,7 +126,7 @@ export const OtpVerificationScreen: React.FC = () => {
                 style={styles.logo}
                 resizeMode="contain"
               />
-              <Text style={styles.brandTitle}>My Medi Logs</Text>
+              <Text style={styles.brandTitle}>Medi Note</Text>
             </View>
 
             <View style={styles.formCard}>
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.xl * 2,
-    paddingBottom: 120,
+    paddingBottom: 250,
   },
   brandingContainer: {
     alignItems: 'center',

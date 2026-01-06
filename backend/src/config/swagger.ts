@@ -5,11 +5,11 @@ const options: swaggerJsdoc.Options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'My Medi Logs API',
+      title: 'Medi Note API',
       version: '1.0.0',
-      description: 'API documentation for My Medi Logs healthcare mobile application',
+      description: 'API documentation for Medi Note healthcare mobile application',
       contact: {
-        name: 'My Medi Logs',
+        name: 'Medi Note',
       },
     },
     servers: [

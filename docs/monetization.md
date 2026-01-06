@@ -1,6 +1,6 @@
-# Monetization Strategy – My Medi Logs
+# Monetization Strategy – Medi Note
 
-This document defines how **My Medi Logs** can become financially sustainable while keeping the **core experience free**, ethical, and user-trust–first.
+This document defines how **Medi Note** can become financially sustainable while keeping the **core experience free**, ethical, and user-trust–first.
 
 ---
 
@@ -10,7 +10,7 @@ Healthcare apps fail when:
 - they paywall critical health access, or
 - they push ads into sensitive medical contexts.
 
-**My Medi Logs principles:**
+**Medi Note principles:**
 - Core record-keeping must remain free.
 - Users pay for **convenience, intelligence, and scale**, not safety.
 - Monetization must never incentivize unsafe medical behavior.

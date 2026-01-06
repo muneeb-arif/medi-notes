@@ -1,6 +1,6 @@
-# Project Structure – My Medi Logs
+# Project Structure – Medi Note
 
-This document defines the folder layout and naming conventions for the My Medi Logs mobile app (Expo + React Native + TypeScript). It is based on the SRS/wireframes and is optimized for maintainability, testability, and safe usage with AI-assisted coding tools.
+This document defines the folder layout and naming conventions for the Medi Note mobile app (Expo + React Native + TypeScript). It is based on the SRS/wireframes and is optimized for maintainability, testability, and safe usage with AI-assisted coding tools.
 
 ## 1. High-Level Layout
 

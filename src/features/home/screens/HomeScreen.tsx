@@ -151,7 +151,7 @@ export const HomeScreen: React.FC = () => {
   if (!activeProfileId) {
     return (
       <Screen>
-        <AppHeader title="Welcome to Medi Notes" />
+        <AppHeader title="Welcome to Medi Note" />
         <EmptyState
           title="No active profile selected"
           description="Select or create a profile to view your health dashboard"
@@ -165,7 +165,7 @@ export const HomeScreen: React.FC = () => {
   if (isLoading) {
     return (
       <Screen>
-        <AppHeader title="Welcome to Medi Notes" />
+        <AppHeader title="Welcome to Medi Note" />
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" />
         </View>
@@ -175,7 +175,7 @@ export const HomeScreen: React.FC = () => {
 
   return (
     <Screen scrollable>
-      <AppHeader title="Welcome to Medi Notes" />
+      <AppHeader title="Welcome to Medi Note" />
       
       {/* Context Header */}
       <SectionCard style={styles.contextHeader}>

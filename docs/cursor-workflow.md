@@ -1,4 +1,4 @@
-# Cursor Workflow – My Medi Logs
+# Cursor Workflow – Medi Note
 
 This document explains how to use Cursor (or any AI coding assistant) safely and productively on this project. The goal is to leverage AI for speed while maintaining predictable, high-quality code.
 

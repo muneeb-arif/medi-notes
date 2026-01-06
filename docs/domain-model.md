@@ -1,4 +1,4 @@
-# Domain Model – My Medi Logs
+# Domain Model – Medi Note
 
 This file defines the data structures, entities, and relationships in the system.
 

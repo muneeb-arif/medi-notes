@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # init-structure.sh
-# Initializes folder structure for My Medi Logs (Expo + React Native)
+# Initializes folder structure for Medi Note (Expo + React Native)
 
 set -e
 

@@ -1,6 +1,6 @@
-# My Medi Logs – Comprehensive Software Requirements Specification (Full)
+# Medi Note – Comprehensive Software Requirements Specification (Full)
 
-> This is the **full SRS** for the My Medi Logs mobile application.  
+> This is the **full SRS** for the Medi Note mobile application.  
 > It combines functional requirements, non‑functional requirements, architecture, security, compliance, and future roadmap into a single reference.
 
 ---
@@ -9,7 +9,7 @@
 
 ### 1.1 Purpose
 
-The purpose of this document is to define the complete set of requirements and high‑level architecture for the **My Medi Logs** application – a patient‑centric health records app for managing personal and family medical data, sharing it securely with doctors, and enabling future AI‑based assistance.
+The purpose of this document is to define the complete set of requirements and high‑level architecture for the **Medi Note** application – a patient‑centric health records app for managing personal and family medical data, sharing it securely with doctors, and enabling future AI‑based assistance.
 
 This document is intended for:
 
@@ -20,7 +20,7 @@ This document is intended for:
 
 ### 1.2 Scope
 
-My Medi Logs is a **mobile application (iOS & Android)** built with **React Native (Expo)** and a cloud backend. It allows:
+Medi Note is a **mobile application (iOS & Android)** built with **React Native (Expo)** and a cloud backend. It allows:
 
 - Individuals to manage their own and family members’ health records.
 - Patients to store and view lab reports, prescriptions, vitals, medications, surgeries, insurance, and doctor information.

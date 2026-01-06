@@ -1,4 +1,4 @@
-# AI Health Assistant Spec (v2+) – My Medi Logs
+# AI Health Assistant Spec (v2+) – Medi Note
 
 This document defines requirements, constraints, and implementation guidance for the **AI-based 1:1 personal healthcare assistant**. The assistant must be safe, privacy-preserving, and designed to support (not replace) clinical care.
 

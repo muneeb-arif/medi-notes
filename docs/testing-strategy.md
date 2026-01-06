@@ -1,6 +1,6 @@
-# Testing Strategy – My Medi Logs
+# Testing Strategy – Medi Note
 
-This document describes how we test the My Medi Logs app to ensure correctness, safety, and reliability, especially for critical healthcare flows.
+This document describes how we test the Medi Note app to ensure correctness, safety, and reliability, especially for critical healthcare flows.
 
 ## 1. Goals
 

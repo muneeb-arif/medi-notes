@@ -1,6 +1,6 @@
-# My Medi Logs – API Contract (v1, REST, JSON)
+# Medi Note – API Contract (v1, REST, JSON)
 
-> This document defines the **backend REST API** for the My Medi Logs app.  
+> This document defines the **backend REST API** for the Medi Note app.  
 > All endpoints are versioned under `/api/v1`.  
 > Data models are aligned with `domain-model.md` and `SRS-functional.md`.
 

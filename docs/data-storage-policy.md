@@ -1,6 +1,6 @@
-# Data Storage & Retention Policy – My Medi Logs
+# Data Storage & Retention Policy – Medi Note
 
-This document describes how data is stored, encrypted, accessed, and retained for the My Medi Logs application. It is designed to be compatible with future HIPAA/GDPR compliance and the requirements in the SRS.
+This document describes how data is stored, encrypted, accessed, and retained for the Medi Note application. It is designed to be compatible with future HIPAA/GDPR compliance and the requirements in the SRS.
 
 ## 1. Data Classification
 

@@ -1,4 +1,4 @@
-# Coding Standards – My Medi Logs
+# Coding Standards – Medi Note
 
 These standards ensure consistency, readability, and safety across the codebase, and make it easier to work with AI-assisted tools (Cursor) without introducing bugs.
 

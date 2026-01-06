@@ -1,7 +1,7 @@
-# Overview – My Medi Logs
+# Overview – Medi Note
 
 ## 1. Introduction
-My Medi Logs is a modern, patient-centric mobile application designed to consolidate an individual’s medical records, family health information, vitals, medications, appointments, and emergency details into a single, secure, easy-to-share digital profile. The app supports multi-profile health management (self + family), condition-specific sub-profiles, doctor collaboration, consent management, secure report sharing, and future-ready AI-driven healthcare assistance.
+Medi Note is a modern, patient-centric mobile application designed to consolidate an individual’s medical records, family health information, vitals, medications, appointments, and emergency details into a single, secure, easy-to-share digital profile. The app supports multi-profile health management (self + family), condition-specific sub-profiles, doctor collaboration, consent management, secure report sharing, and future-ready AI-driven healthcare assistance.
 
 The goal is to empower patients with complete ownership of their medical history while providing doctors with well-organized, consent-based access to essential information.
 

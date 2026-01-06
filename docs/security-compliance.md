@@ -1,7 +1,7 @@
-# Security & Compliance Checklist – My Medi Logs
+# Security & Compliance Checklist – Medi Note
 (HIPAA & GDPR Ready – Plain Language)
 
-> This document translates HIPAA and GDPR concepts into **practical, developer-friendly rules** for My Medi Logs.
+> This document translates HIPAA and GDPR concepts into **practical, developer-friendly rules** for Medi Note.
 > It is designed for a Pakistan-first launch, while keeping the system **ready for US/EU compliance**.
 
 ---

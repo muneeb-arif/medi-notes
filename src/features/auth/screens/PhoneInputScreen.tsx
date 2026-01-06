@@ -47,6 +47,7 @@ export const PhoneInputScreen: React.FC = () => {
     setIsLoading(true);
     try {
       await authApi.requestOtp({ phone: data.phone });
+      // @ts-ignore
       navigation.navigate('OtpVerification' as never, { phone: data.phone } as never);
     } catch (error) {
       const apiError = error as { message?: string; code?: string; status?: number };
@@ -86,7 +87,7 @@ export const PhoneInputScreen: React.FC = () => {
                 style={styles.logo}
                 resizeMode="contain"
               />
-              <Text style={styles.brandTitle}>Medi Notes</Text>
+              <Text style={styles.brandTitle}>Medi Note</Text>
               <Text style={styles.brandSubtitle}>Secure Medical Records</Text>
             </View>
 
@@ -161,7 +162,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.xl * 2,
-    paddingBottom: 120,
+    paddingBottom: 250,
   },
   brandingContainer: {
     alignItems: 'center',
