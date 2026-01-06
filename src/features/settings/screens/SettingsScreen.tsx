@@ -1,5 +1,7 @@
+import { queryClient } from '@app/AppProviders';
 import { authApi } from '@features/auth/api/auth.api';
 import { useNavigation } from '@react-navigation/native';
+import { useActiveProfileStore } from '@store/activeProfile.store';
 import { useSessionStore } from '@store/session.store';
 import Constants from 'expo-constants';
 import React, { useState } from 'react';
@@ -18,6 +20,7 @@ export const SettingsScreen: React.FC = () => {
   const navigation = useNavigation();
   const { data: account, isLoading, error } = useAccountMe();
   const { refreshToken, clearSession } = useSessionStore();
+  const { clearActiveProfile } = useActiveProfileStore();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
@@ -32,13 +35,46 @@ export const SettingsScreen: React.FC = () => {
           onPress: async () => {
             setIsLoggingOut(true);
             try {
+              // 1. First, invalidate token on backend (this is important for security)
               if (refreshToken) {
-                await authApi.logout({ refreshToken });
+                try {
+                  await authApi.logout({ refreshToken });
+                } catch (error) {
+                  // Log but continue - local logout should still proceed
+                  console.error('API logout failed, continuing with local logout:', error);
+                }
               }
+              
+              // 2. Clear React Query cache - remove all queries completely
+              // Using removeQueries() with no filters removes ALL queries from cache
+              queryClient.removeQueries();
+              
+              // 3. Clear active profile store (SecureStore + Zustand state)
+              try {
+                await clearActiveProfile();
+              } catch (error) {
+                console.error('Error clearing active profile:', error);
+              }
+              
+              // 4. Clear session store (tokens from SecureStore + Zustand state)
+              try {
+                await clearSession();
+              } catch (error) {
+                console.error('Error clearing session:', error);
+              }
+              
+              // 5. Reset query client to ensure no stale data remains
+              queryClient.resetQueries();
             } catch (error) {
-              // Continue with logout even if API call fails
+              // If anything fails, still try to clear local storage
+              console.error('Error during logout:', error);
+              try {
+                await clearActiveProfile();
+                await clearSession();
+              } catch (clearError) {
+                console.error('Error during fallback logout clearing:', clearError);
+              }
             } finally {
-              await clearSession();
               setIsLoggingOut(false);
               // Navigation will be handled by RootNavigator when accessToken becomes null
               // This will automatically redirect to PhoneInputScreen via AuthNavigator
