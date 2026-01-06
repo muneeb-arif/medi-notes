@@ -2,15 +2,17 @@ import { PrimaryButton } from '@components/PrimaryButton';
 import { Screen } from '@components/Screen';
 import { SectionCard } from '@components/SectionCard';
 import { zodResolver } from '@hookform/resolvers/zod';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { useNavigation } from '@react-navigation/native';
 import { useSessionStore } from '@store/session.store';
+import { useQueryClient } from '@tanstack/react-query';
 import { spacing, typography } from '@theme';
 import React, { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   Alert,
+  Modal,
   Platform,
   StyleSheet,
   Text,
@@ -63,17 +65,34 @@ const formatDate = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
+const formatDateDisplay = (dateString: string | null | undefined): string => {
+  if (!dateString) return '';
+  // Extract only the date part (YYYY-MM-DD) from ISO string if it includes time
+  const dateOnly = dateString.split('T')[0];
+  const [year, month, day] = dateOnly.split('-');
+  if (year && month && day) {
+    // Format as "MMM DD, YYYY" for better readability
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+  return dateString;
+};
+
 const parseDate = (dateString: string): Date => {
   if (!dateString) return new Date(2000, 0, 1);
-  const [year, month, day] = dateString.split('-').map(Number);
+  // Extract only the date part from ISO string if it includes time
+  const dateOnly = dateString.split('T')[0];
+  const [year, month, day] = dateOnly.split('-').map(Number);
   return new Date(year, month - 1, day);
 };
 
 export const AccountInfoScreen: React.FC = () => {
   const navigation = useNavigation();
+  const queryClient = useQueryClient();
   const { account, setAccount } = useSessionStore();
   const [isLoading, setIsLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [tempSelectedDate, setTempSelectedDate] = useState<Date | null>(null);
 
   const {
     control,
@@ -85,7 +104,7 @@ export const AccountInfoScreen: React.FC = () => {
     resolver: zodResolver(accountInfoSchema),
     defaultValues: {
       fullName: account?.fullName || '',
-      dateOfBirth: account?.dateOfBirth || '',
+      dateOfBirth: account?.dateOfBirth ? account.dateOfBirth.split('T')[0] : '',
       bloodGroup: account?.bloodGroup || '',
       gender: account?.gender || undefined,
       email: account?.email || '',
@@ -100,21 +119,25 @@ export const AccountInfoScreen: React.FC = () => {
   }, []);
 
   const dateOfBirthValue = watch('dateOfBirth');
-  const selectedDate = dateOfBirthValue ? parseDate(dateOfBirthValue) : new Date(2000, 0, 1);
+  const initialDate = dateOfBirthValue ? parseDate(dateOfBirthValue) : new Date(2000, 0, 1);
+  const selectedDate = tempSelectedDate || initialDate;
 
-  const onDateChange = (event: any, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
-      if (event.type === 'set' && selectedDate) {
-        setValue('dateOfBirth', formatDate(selectedDate), { shouldValidate: true });
-      } else if (event.type === 'dismissed') {
-        // User dismissed the picker, keep current value
-      }
-    } else {
-      if (selectedDate) {
-        setValue('dateOfBirth', formatDate(selectedDate), { shouldValidate: true });
-      }
-    }
+  const openAndroidDatePicker = () => {
+    const currentDate = selectedDate;
+    DateTimePickerAndroid.open({
+      value: currentDate,
+      mode: 'date',
+      display: 'spinner',
+      maximumDate: new Date(),
+      minimumDate: new Date(1900, 0, 1),
+      onChange: (event, date) => {
+        if (event.type === 'set' && date) {
+          // User confirmed the selection
+          setValue('dateOfBirth', formatDate(date), { shouldValidate: true });
+        }
+        // If event.type === 'dismissed', user cancelled - do nothing
+      },
+    });
   };
 
   const onSubmit = async (data: AccountInfoFormData) => {
@@ -128,7 +151,12 @@ export const AccountInfoScreen: React.FC = () => {
         email: data.email || null,
         recoveryPhone: data.recoveryPhone || null,
       });
+      
+      // Update Zustand store
       setAccount(updatedAccount);
+      
+      // Invalidate React Query cache so HomeScreen and other screens refetch updated account data
+      await queryClient.invalidateQueries({ queryKey: ['account', 'me'] });
       
       // If accessed from Settings (not onboarding), navigate back
       // Otherwise, navigation will be handled automatically by RootNavigator
@@ -225,31 +253,72 @@ export const AccountInfoScreen: React.FC = () => {
                       styles.dateInput,
                       errors.dateOfBirth && styles.inputError,
                     ]}
-                    onPress={() => !isLoading && setShowDatePicker(true)}
+                    onPress={() => {
+                      if (!isLoading) {
+                        if (Platform.OS === 'android') {
+                          openAndroidDatePicker();
+                        } else {
+                          setTempSelectedDate(null);
+                          setShowDatePicker(true);
+                        }
+                      }
+                    }}
                     disabled={isLoading}
                   >
                     <Text style={[styles.dateText, !value && styles.placeholderText]}>
-                      {value || 'Select date of birth (optional)'}
+                      {value ? formatDateDisplay(value) : 'Select date of birth (optional)'}
                     </Text>
                   </TouchableOpacity>
-                  {showDatePicker && (
-                    <DateTimePicker
-                      value={selectedDate}
-                      mode="date"
-                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                      onChange={onDateChange}
-                      maximumDate={new Date()}
-                      minimumDate={new Date(1900, 0, 1)}
-                    />
-                  )}
-                  {Platform.OS === 'ios' && showDatePicker && (
-                    <TouchableOpacity
-                      style={styles.datePickerButton}
-                      onPress={() => setShowDatePicker(false)}
+                  {Platform.OS === 'ios' ? (
+                    <Modal
+                      visible={showDatePicker}
+                      transparent
+                      animationType="slide"
+                      onRequestClose={() => setShowDatePicker(false)}
                     >
-                      <Text style={styles.datePickerButtonText}>Done</Text>
-                    </TouchableOpacity>
-                  )}
+                      <View style={styles.modalOverlay}>
+                        <View style={styles.modalContent}>
+                          <View style={styles.modalHeader}>
+                            <TouchableOpacity
+                              onPress={() => {
+                                setTempSelectedDate(null);
+                                setShowDatePicker(false);
+                              }}
+                              style={styles.modalCancelButton}
+                            >
+                              <Text style={styles.modalCancelText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <Text style={styles.modalTitle}>Select Date</Text>
+                            <TouchableOpacity
+                              onPress={() => {
+                                const finalDate = tempSelectedDate || selectedDate;
+                                setValue('dateOfBirth', formatDate(finalDate), { shouldValidate: true });
+                                setTempSelectedDate(null);
+                                setShowDatePicker(false);
+                              }}
+                              style={styles.modalDoneButton}
+                            >
+                              <Text style={styles.modalDoneText}>Done</Text>
+                            </TouchableOpacity>
+                          </View>
+                          <DateTimePicker
+                            value={selectedDate}
+                            mode="date"
+                            display="spinner"
+                            onChange={(event, date) => {
+                              // Track the selected date as user scrolls
+                              if (date) {
+                                setTempSelectedDate(date);
+                              }
+                            }}
+                            maximumDate={new Date()}
+                            minimumDate={new Date(1900, 0, 1)}
+                            style={styles.iosDatePicker}
+                          />
+                        </View>
+                      </View>
+                    </Modal>
+                  ) : null}
                   {errors.dateOfBirth && (
                     <Text style={styles.errorText}>{errors.dateOfBirth.message}</Text>
                   )}
@@ -384,7 +453,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     fontSize: 16,
     backgroundColor: '#FFFFFF',
-    height: 50,
+    height: 55,
     color: '#000000',
   },
   dateInput: {
@@ -429,5 +498,56 @@ const styles = StyleSheet.create({
   datePickerButtonText: {
     ...typography.bodyBold,
     color: '#FFFFFF',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: spacing.xl,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  modalTitle: {
+    ...typography.bodyBold,
+    fontSize: 18,
+  },
+  modalCancelButton: {
+    padding: spacing.xs,
+  },
+  modalCancelText: {
+    ...typography.body,
+    color: '#8E8E93',
+    fontSize: 16,
+  },
+  modalDoneButton: {
+    padding: spacing.xs,
+  },
+  modalDoneText: {
+    ...typography.bodyBold,
+    color: '#007AFF',
+    fontSize: 16,
+  },
+  iosDatePicker: {
+    height: 200,
+  },
+  androidDatePicker: {
+    height: 200,
+    width: '100%',
+  },
+  pickerWrapper: {
+    padding: spacing.md,
+    alignItems: 'center',
   },
 });

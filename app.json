@@ -4,7 +4,7 @@
     "slug": "medinotes",
     "version": "1.0.0",
     "extra": {
-      "apiBaseURL": "http://192.168.1.53:3000/api/v1"
+      "apiBaseURL": "http://192.168.1.75:3000/api/v1"
     },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
