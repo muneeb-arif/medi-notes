@@ -22,6 +22,7 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
       style={[styles.button, (disabled || loading) && styles.buttonDisabled, style]}
       onPress={onPress}
       disabled={disabled || loading}
+      activeOpacity={0.7}
     >
       {loading ? (
         <ActivityIndicator color="#FFFFFF" />
