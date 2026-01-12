@@ -8,6 +8,7 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -23,66 +24,83 @@ export const SettingsScreen: React.FC = () => {
   const { clearActiveProfile } = useActiveProfileStore();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = async () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            setIsLoggingOut(true);
-            try {
-              // 1. First, invalidate token on backend (this is important for security)
-              if (refreshToken) {
-                try {
-                  await authApi.logout({ refreshToken });
-                } catch (error) {
-                  // Log but continue - local logout should still proceed
-                  console.error('API logout failed, continuing with local logout:', error);
-                }
-              }
-              
-              // 2. Clear React Query cache - remove all queries completely
-              // Using removeQueries() with no filters removes ALL queries from cache
-              queryClient.removeQueries();
-              
-              // 3. Clear active profile store (SecureStore + Zustand state)
-              try {
-                await clearActiveProfile();
-              } catch (error) {
-                console.error('Error clearing active profile:', error);
-              }
-              
-              // 4. Clear session store (tokens from SecureStore + Zustand state)
-              try {
-                await clearSession();
-              } catch (error) {
-                console.error('Error clearing session:', error);
-              }
-              
-              // 5. Reset query client to ensure no stale data remains
-              queryClient.resetQueries();
-            } catch (error) {
-              // If anything fails, still try to clear local storage
-              console.error('Error during logout:', error);
-              try {
-                await clearActiveProfile();
-                await clearSession();
-              } catch (clearError) {
-                console.error('Error during fallback logout clearing:', clearError);
-              }
-            } finally {
-              setIsLoggingOut(false);
-              // Navigation will be handled by RootNavigator when accessToken becomes null
-              // This will automatically redirect to PhoneInputScreen via AuthNavigator
-            }
+  const performLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      console.log('[Logout] Starting logout process...');
+      
+      // 1. First, invalidate token on backend (this is important for security)
+      if (refreshToken) {
+        try {
+          await authApi.logout({ refreshToken });
+          console.log('[Logout] API logout successful');
+        } catch (error) {
+          // Log but continue - local logout should still proceed
+          console.error('[Logout] API logout failed, continuing with local logout:', error);
+        }
+      }
+      
+      // 2. Clear React Query cache - remove all queries completely
+      // Using removeQueries() with no filters removes ALL queries from cache
+      queryClient.removeQueries();
+      console.log('[Logout] React Query cache cleared');
+      
+      // 3. Clear active profile store (SecureStore/localStorage + Zustand state)
+      try {
+        await clearActiveProfile();
+        console.log('[Logout] Active profile cleared');
+      } catch (error) {
+        console.error('[Logout] Error clearing active profile:', error);
+      }
+      
+      // 4. Clear session store (tokens from SecureStore/localStorage + Zustand state)
+      try {
+        await clearSession();
+        console.log('[Logout] Session cleared');
+      } catch (error) {
+        console.error('[Logout] Error clearing session:', error);
+      }
+      
+      // 5. Reset query client to ensure no stale data remains
+      queryClient.resetQueries();
+      console.log('[Logout] Logout complete. Navigation should happen automatically.');
+    } catch (error) {
+      // If anything fails, still try to clear local storage
+      console.error('[Logout] Error during logout:', error);
+      try {
+        await clearActiveProfile();
+        await clearSession();
+      } catch (clearError) {
+        console.error('[Logout] Error during fallback logout clearing:', clearError);
+      }
+    } finally {
+      setIsLoggingOut(false);
+      // Navigation will be handled by RootNavigator when accessToken becomes null
+      // This will automatically redirect to PhoneInputScreen via AuthNavigator
+    }
+  };
+
+  const handleLogout = () => {
+    if (Platform.OS === 'web') {
+      // Use browser's confirm dialog on web
+      if (typeof window !== 'undefined' && window.confirm('Are you sure you want to logout?')) {
+        performLogout();
+      }
+    } else {
+      // Use Alert.alert on native
+      Alert.alert(
+        'Logout',
+        'Are you sure you want to logout?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Logout',
+            style: 'destructive',
+            onPress: performLogout,
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const handleUpdateAccountInfo = () => {

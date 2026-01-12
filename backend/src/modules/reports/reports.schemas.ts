@@ -13,7 +13,7 @@ export const createReportSchema = z.object({
   facility: z.string().optional(),
   tags: z.array(z.string()).optional(),
   conditionProfileId: z.string().optional(),
-  fileKey: z.string().min(1, 'File key is required'),
+  fileKey: z.string().optional(),
   includeInEmergency: z.boolean().optional(),
 });
 

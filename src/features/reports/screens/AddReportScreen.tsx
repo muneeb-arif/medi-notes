@@ -91,15 +91,13 @@ export const AddReportScreen: React.FC = () => {
   };
 
   const onSubmit = async (data: ReportFormData) => {
-    if (!selectedFile) {
-      Alert.alert('Error', 'Please select a file');
-      return;
-    }
-
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
-    if (!allowedTypes.includes(selectedFile.mimeType)) {
-      Alert.alert('Error', 'Only PDF, JPEG, and PNG files are allowed');
-      return;
+    // Validate file type if file is selected
+    if (selectedFile) {
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+      if (!allowedTypes.includes(selectedFile.mimeType)) {
+        Alert.alert('Error', 'Only PDF, JPEG, and PNG files are allowed');
+        return;
+      }
     }
 
     try {
@@ -116,14 +114,14 @@ export const AddReportScreen: React.FC = () => {
           facility: data.facility || undefined,
           tags,
         },
-        fileUri: selectedFile.uri,
-        fileType: selectedFile.mimeType,
+        fileUri: selectedFile?.uri,
+        fileType: selectedFile?.mimeType,
       });
 
       navigation.goBack();
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : 'Failed to upload report. Please try again.';
+        error instanceof Error ? error.message : 'Failed to save report. Please try again.';
       Alert.alert('Error', errorMessage);
     }
   };
@@ -139,14 +137,14 @@ export const AddReportScreen: React.FC = () => {
           <SectionCard style={styles.section}>
             <Text style={styles.sectionTitle}>File</Text>
             <View style={styles.field}>
-              <Text style={styles.label}>Select File *</Text>
+              <Text style={styles.label}>Select File (Optional)</Text>
               <TouchableOpacity style={styles.fileButton} onPress={pickDocument}>
                 <Text style={styles.fileButtonText}>
-                  {selectedFile ? `Selected: ${selectedFile.name}` : 'Select PDF, JPEG, or PNG'}
+                  {selectedFile ? `Selected: ${selectedFile.name}` : 'Select PDF, JPEG, or PNG (Optional)'}
                 </Text>
               </TouchableOpacity>
               {!selectedFile && (
-                <Text style={styles.helperText}>Accepted formats: PDF, JPEG, PNG</Text>
+                <Text style={styles.helperText}>Accepted formats: PDF, JPEG, PNG. You can save the report without a file.</Text>
               )}
             </View>
           </SectionCard>
@@ -285,10 +283,10 @@ export const AddReportScreen: React.FC = () => {
           </SectionCard>
 
           <PrimaryButton
-            label="Upload Report"
+            label="Save Report"
             onPress={handleSubmit(onSubmit)}
             loading={createReport.isPending}
-            disabled={createReport.isPending || !selectedFile}
+            disabled={createReport.isPending}
             style={styles.submitButton}
           />
         </View>

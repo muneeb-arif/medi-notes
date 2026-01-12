@@ -1,6 +1,7 @@
 import { profilesApi } from '@features/profiles/api/profiles.api';
 import type { PersonProfile } from '@features/profiles/types';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import { create } from 'zustand';
 
 interface ActiveProfileState {
@@ -13,26 +14,51 @@ interface ActiveProfileState {
 
 const ACTIVE_PROFILE_KEY = 'active_profile_id';
 
+// Storage helpers that work on both native and web
+const storage = {
+  setItem: async (key: string, value: string): Promise<void> => {
+    if (Platform.OS === 'web') {
+      localStorage.setItem(key, value);
+    } else {
+      await SecureStore.setItemAsync(key, value);
+    }
+  },
+  getItem: async (key: string): Promise<string | null> => {
+    if (Platform.OS === 'web') {
+      return localStorage.getItem(key);
+    } else {
+      return await SecureStore.getItemAsync(key);
+    }
+  },
+  deleteItem: async (key: string): Promise<void> => {
+    if (Platform.OS === 'web') {
+      localStorage.removeItem(key);
+    } else {
+      await SecureStore.deleteItemAsync(key);
+    }
+  },
+};
+
 export const useActiveProfileStore = create<ActiveProfileState>((set, get) => ({
   activeProfileId: null,
 
   setActiveProfileId: async (profileId: string | null) => {
     if (profileId) {
-      await SecureStore.setItemAsync(ACTIVE_PROFILE_KEY, profileId);
+      await storage.setItem(ACTIVE_PROFILE_KEY, profileId);
     } else {
-      await SecureStore.deleteItemAsync(ACTIVE_PROFILE_KEY);
+      await storage.deleteItem(ACTIVE_PROFILE_KEY);
     }
     set({ activeProfileId: profileId });
   },
 
   clearActiveProfile: async () => {
-    await SecureStore.deleteItemAsync(ACTIVE_PROFILE_KEY);
+    await storage.deleteItem(ACTIVE_PROFILE_KEY);
     set({ activeProfileId: null });
   },
 
   hydrate: async () => {
     try {
-      const profileId = await SecureStore.getItemAsync(ACTIVE_PROFILE_KEY);
+      const profileId = await storage.getItem(ACTIVE_PROFILE_KEY);
       set({ activeProfileId: profileId });
     } catch {
       set({ activeProfileId: null });

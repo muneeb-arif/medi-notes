@@ -33,8 +33,9 @@ export const ReportViewerScreen: React.FC = () => {
     );
   }
 
-  const isImage = report.fileType?.startsWith('image/') || report.fileUrl.match(/\.(jpg|jpeg|png)$/i);
-  const isPdf = report.fileType === 'application/pdf' || report.fileUrl.match(/\.pdf$/i);
+  const hasFile = !!report.fileUrl;
+  const isImage = hasFile && (report.fileType?.startsWith('image/') || report.fileUrl.match(/\.(jpg|jpeg|png)$/i));
+  const isPdf = hasFile && (report.fileType === 'application/pdf' || report.fileUrl.match(/\.pdf$/i));
 
   return (
     <ScrollView style={styles.container}>
@@ -50,7 +51,13 @@ export const ReportViewerScreen: React.FC = () => {
       </View>
 
       <View style={styles.viewerContainer}>
-        {isImage ? (
+        {!hasFile ? (
+          <View style={styles.unsupportedContainer}>
+            <Text style={styles.unsupportedText}>
+              No file attached to this report.
+            </Text>
+          </View>
+        ) : isImage ? (
           <Image source={{ uri: report.fileUrl }} style={styles.image} resizeMode="contain" />
         ) : isPdf ? (
           <WebView

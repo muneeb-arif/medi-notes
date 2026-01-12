@@ -1,5 +1,6 @@
 import type { Account, Tokens } from '@features/auth/types';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import { create } from 'zustand';
 
 interface SessionState {
@@ -18,6 +19,31 @@ const TOKEN_KEYS = {
   REFRESH_TOKEN: 'refresh_token',
 } as const;
 
+// Storage helpers that work on both native and web
+const storage = {
+  setItem: async (key: string, value: string): Promise<void> => {
+    if (Platform.OS === 'web') {
+      localStorage.setItem(key, value);
+    } else {
+      await SecureStore.setItemAsync(key, value);
+    }
+  },
+  getItem: async (key: string): Promise<string | null> => {
+    if (Platform.OS === 'web') {
+      return localStorage.getItem(key);
+    } else {
+      return await SecureStore.getItemAsync(key);
+    }
+  },
+  deleteItem: async (key: string): Promise<void> => {
+    if (Platform.OS === 'web') {
+      localStorage.removeItem(key);
+    } else {
+      await SecureStore.deleteItemAsync(key);
+    }
+  },
+};
+
 export const useSessionStore = create<SessionState>((set, get) => ({
   accessToken: null,
   refreshToken: null,
@@ -25,8 +51,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   isHydrated: false,
 
   setTokens: async (tokens: Tokens) => {
-    await SecureStore.setItemAsync(TOKEN_KEYS.ACCESS_TOKEN, tokens.accessToken);
-    await SecureStore.setItemAsync(TOKEN_KEYS.REFRESH_TOKEN, tokens.refreshToken);
+    await storage.setItem(TOKEN_KEYS.ACCESS_TOKEN, tokens.accessToken);
+    await storage.setItem(TOKEN_KEYS.REFRESH_TOKEN, tokens.refreshToken);
     set({
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
@@ -38,8 +64,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   clearSession: async () => {
-    await SecureStore.deleteItemAsync(TOKEN_KEYS.ACCESS_TOKEN);
-    await SecureStore.deleteItemAsync(TOKEN_KEYS.REFRESH_TOKEN);
+    await storage.deleteItem(TOKEN_KEYS.ACCESS_TOKEN);
+    await storage.deleteItem(TOKEN_KEYS.REFRESH_TOKEN);
     set({
       accessToken: null,
       refreshToken: null,
@@ -49,8 +75,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   hydrate: async () => {
     try {
-      const accessToken = await SecureStore.getItemAsync(TOKEN_KEYS.ACCESS_TOKEN);
-      const refreshToken = await SecureStore.getItemAsync(TOKEN_KEYS.REFRESH_TOKEN);
+      const accessToken = await storage.getItem(TOKEN_KEYS.ACCESS_TOKEN);
+      const refreshToken = await storage.getItem(TOKEN_KEYS.REFRESH_TOKEN);
       set({
         accessToken,
         refreshToken,

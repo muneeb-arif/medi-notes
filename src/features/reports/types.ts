@@ -10,7 +10,7 @@ export interface Report {
   doctorName?: string;
   facility?: string;
   tags?: string[];
-  fileUrl: string;
+  fileUrl?: string;
   fileType?: string;
   includeInEmergency?: boolean;
   createdAt: string;
@@ -25,7 +25,7 @@ export interface CreateReportInput {
   facility?: string;
   tags?: string[];
   conditionProfileId?: string;
-  fileKey: string;
+  fileKey?: string;
   includeInEmergency?: boolean;
 }
 

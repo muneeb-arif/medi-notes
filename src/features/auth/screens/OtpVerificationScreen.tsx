@@ -4,8 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useActiveProfileStore } from '@store/activeProfile.store';
 import { useSessionStore } from '@store/session.store';
-import { spacing, typography } from '@theme';
-import React, { useState } from 'react';
+import { colors, spacing, typography } from '@theme';
+import React, { useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   Alert,
@@ -40,6 +40,7 @@ export const OtpVerificationScreen: React.FC = () => {
   const { ensureDefaultProfile } = useActiveProfileStore();
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const hasAutoVerified = useRef(false);
 
   const {
     control,
@@ -61,16 +62,36 @@ export const OtpVerificationScreen: React.FC = () => {
 
     setIsLoading(true);
     try {
+      console.log('[OTP] Starting verification...');
       const response = await authApi.verifyOtp({ phone, otp: data.otp });
-      await setTokens(response.tokens);
-      setAccount(response.account);
+      console.log('[OTP] API response received:', { 
+        hasTokens: !!response.tokens, 
+        hasAccount: !!response.account,
+        requiresOnboarding: response.requiresOnboarding 
+      });
       
-      // Ensure default profile is selected after login
+      console.log('[OTP] Setting tokens...');
+      await setTokens(response.tokens);
+      console.log('[OTP] Tokens set, setting account...');
+      
+      setAccount(response.account);
+      console.log('[OTP] Account set, ensuring default profile...');
+      
       await ensureDefaultProfile();
+      console.log('[OTP] Default profile ensured. Navigation should happen now.');
+      
+      // Check if state was actually updated
+      const currentState = useSessionStore.getState();
+      console.log('[OTP] Current session state:', {
+        hasAccessToken: !!currentState.accessToken,
+        hasAccount: !!currentState.account,
+        isHydrated: currentState.isHydrated
+      });
       
       // Navigation will be handled automatically by RootNavigator
       // based on requiresOnboarding flag in the account state
     } catch (error) {
+      console.error('[OTP] Verification error:', error);
       const apiError = error as { message?: string; code?: string };
       let errorMessage = 'The code you entered is incorrect. Please try again.';
 
@@ -84,11 +105,16 @@ export const OtpVerificationScreen: React.FC = () => {
         errorMessage = apiError.message;
       }
 
-      Alert.alert('Verification Failed', errorMessage);
+      if (Platform.OS !== 'web') {
+        Alert.alert('Verification Failed', errorMessage);
+      } else {
+        console.error('[OTP] Verification Failed:', errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }
   };
+
 
   const handleResendOtp = async () => {
     if (!phone) return;
@@ -194,7 +220,7 @@ export const OtpVerificationScreen: React.FC = () => {
 const styles = StyleSheet.create({
   background: {
     flex: 1,
-    backgroundColor: '#2b90f4',
+    backgroundColor: colors.gradientPrimary,
   },
   gradientOverlay: {
     position: 'absolute',
@@ -202,7 +228,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: '40%',
-    backgroundColor: '#1E90FF',
+    backgroundColor: colors.gradientPrimary,
     opacity: 0.3,
   },
   keyboardView: {

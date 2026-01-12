@@ -2,7 +2,7 @@ import { PrimaryButton } from '@components/PrimaryButton';
 import { Screen } from '@components/Screen';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigation } from '@react-navigation/native';
-import { spacing, typography } from '@theme';
+import { colors, spacing, typography } from '@theme';
 import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
@@ -144,7 +144,7 @@ export const PhoneInputScreen: React.FC = () => {
 const styles = StyleSheet.create({
   background: {
     flex: 1,
-    backgroundColor: '#2b90f4',
+    backgroundColor: colors.gradientPrimary,
   },
   gradientOverlay: {
     position: 'absolute',
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: '40%',
-    backgroundColor: '#1E90FF',
+    backgroundColor: colors.gradientPrimary,
     opacity: 0.3,
   },
   keyboardView: {

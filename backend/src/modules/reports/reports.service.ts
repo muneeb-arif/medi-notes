@@ -44,8 +44,10 @@ export const reportsService = {
       doctorName: data.doctorName,
       facility: data.facility,
       tags: data.tags,
-      fileUrl: `${config.apiBaseUrl}/fake-view/${data.fileKey}`,
-      fileType: data.fileKey.split('.').pop() === 'pdf' ? 'application/pdf' : 'image/jpeg',
+      fileUrl: data.fileKey ? `${config.apiBaseUrl}/fake-view/${data.fileKey}` : undefined,
+      fileType: data.fileKey 
+        ? (data.fileKey.split('.').pop() === 'pdf' ? 'application/pdf' : 'image/jpeg')
+        : undefined,
       includeInEmergency: data.includeInEmergency || false,
       createdAt: now,
       updatedAt: now,
